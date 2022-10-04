@@ -88,7 +88,11 @@ describe('Should call the Target', () => {
         },
       },
     }).then((response) => {
-      console.log(response);
+      expect(response?.data?.getSessionDetails).toMatchObject({
+        name: 'John',
+        email: 'john@doe.com',
+        id: '123',
+      });
     });
   });
 

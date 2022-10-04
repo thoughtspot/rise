@@ -107,7 +107,6 @@ export function riseDirectiveTransformer(
           fieldConfig.resolve = (source, args, context, info) => {
             let urlToFetch = url;
             let body: any;
-            console.log(source, args, context, info);
             Object.assign(headers, _.pick(context.req.headers, forwardheaders));
 
             if (args) {
