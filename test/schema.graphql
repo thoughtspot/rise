@@ -1,0 +1,88 @@
+  scalar Void
+
+  type Org {
+    name: String!,
+    id: Int!,
+  }
+
+  type UserGroup {
+    name: String!,
+    id: String!
+  }
+
+  type User {
+    name: String,
+    email: String!
+    id: String
+    account_type: String,
+    currrent_org: Org,
+    privileges: [String],
+    tenant_id: String,
+    user_groups: [UserGroup],
+    display_name: String,
+  }
+
+  type TokenResponse {
+    token: String!,
+    valid_for_userid: String!,
+    valid_for_username: String!,
+    created_at: String!,
+    expires_at: String!,
+  }
+
+  enum CredentialType {
+    USER_PASSWORD,
+    CLUSTER_SECRET_KEY,
+  }
+
+  input Credential {
+    type: CredentialType!,
+    value: String!,
+  }
+
+  enum AccessType {
+    FULL,
+    REPORT_BOOK_VIEW,
+  }
+
+  input Scope {
+    access_type: AccessType!,
+    metadata_id: String,
+    organization_id: Int,
+  }
+
+  type Query {
+    getSessionDetails: User! 
+    @rise(path: "/v2/auth/session/user", method: "GET")
+  }
+
+  type Mutation {
+    login(username: String!, password: String!): Void 
+    @rise(path: "/v2/auth/session/login", method: "POST"),
+
+    createToken(username: String!,
+     credential: Credential!,
+     scope: Scope!, 
+     validity_time_in_sec: Int!): TokenResponse!
+    @rise(
+      path: "/v2/auth/token",
+      method: "POST"
+      setters: [{
+        field: "created_at", path: "creation_time_in_millis"
+      }, {
+        field: "expires_at", path: "expiration_time_in_millis"
+      }]
+    ),
+
+
+    getUser(indentifier: String!): User!
+    @rise(
+      path: "/v2/users/search"
+      method: "POST",
+      postbody: """
+      {
+        "user_identifier": "<%= indentifier%>"
+      }
+      """
+    ),
+  }
