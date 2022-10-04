@@ -43,3 +43,7 @@ schema = riseDirectiveTransformer({
 
 // .. Serve the schema using your favorite Graphql Server.
 ```
+
+## Credits
+
+Heavily inspired from [StepZen](https://stepzen.com/docs/custom-graphql-directives/directives#-rest).
