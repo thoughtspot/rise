@@ -6,30 +6,25 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 // } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { riseDirectiveTransformer, riseDirectiveTypeDefs } from '../src/index';
+import { rise } from '../src/index';
 
 const typeDefs = fs.readFileSync(path.join(__dirname, './schema.graphql'), 'utf8');
 
-// let schema = makeExecutableSchema({
-//   typeDefs: [
-//     riseDirectiveTypeDefs,
-//     typeDefs,
-//   ],
-// });
-
-let schema = buildSchema([riseDirectiveTypeDefs, typeDefs].join('\n'));
-// console.log(buildSchema.prototype, await getLoc(buildSchema));
-
 class ApolloError extends Error {}
 
-schema = riseDirectiveTransformer({
+const { riseDirectiveTransformer, riseDirectiveTypeDefs } = rise({
   baseURL: 'https://rise.com/callosum/v1',
   forwardheaders: ['Authorization', 'cookie'],
   contenttype: 'application/x-www-form-urlencoded',
   resultroot: 'data',
   errorroot: 'error',
   ErrorClass: ApolloError,
-})(schema);
+  name: 'service',
+});
+
+let schema = buildSchema([riseDirectiveTypeDefs, typeDefs].join('\n'));
+
+schema = riseDirectiveTransformer(schema);
 
 beforeAll(() => {
   nock.disableNetConnect();

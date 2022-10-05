@@ -53,18 +53,18 @@
 
   type Query {
     getSessionDetails: User! 
-    @rise(path: "/v2/auth/session/user", method: "GET")
+    @service(path: "/v2/auth/session/user", method: "GET")
   }
 
   type Mutation {
     login(username: String!, password: String!): Void 
-    @rise(path: "/v2/auth/session/login", method: "POST"),
+    @service(path: "/v2/auth/session/login", method: "POST"),
 
     createToken(username: String!,
      credential: Credential!,
      scope: Scope!, 
      validity_time_in_sec: Int!): TokenResponse!
-    @rise(
+    @service(
       path: "/v2/auth/token",
       method: "POST"
       setters: [{
@@ -76,7 +76,7 @@
 
 
     getUser(indentifier: String!): User!
-    @rise(
+    @service(
       path: "/v2/users/search"
       method: "POST",
       postbody: """

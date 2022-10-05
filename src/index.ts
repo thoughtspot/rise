@@ -52,18 +52,19 @@ function transformWithSetters(
   return result;
 }
 
-export const riseDirectiveTypeDefs = `
+export const getRiseDirectiveTypeDefs = (name: string) => `
   scalar JSON
   input RiseSetter {
     field: String!
     path: String!
   }
-  directive @rise(path: String!, method: String, headers: JSON, 
+  directive @${name}(path: String!, method: String, headers: JSON, 
     setters: [RiseSetter], resultroot: String, postbody: String,
     forwardheaders: [String], contenttype: String) on FIELD_DEFINITION
 `;
 
 interface RiseDirectiveOptions {
+  name: string;
   baseURL: string;
   headers: Record<string, string>;
   forwardheaders: string[];
@@ -73,15 +74,17 @@ interface RiseDirectiveOptions {
   ErrorClass: new (...args: any[]) => Error;
 }
 
-export function riseDirectiveTransformer(
+export function rise(
   opts: Partial<RiseDirectiveOptions> = {},
 ) {
   const options: RiseDirectiveOptions = {
-    baseURL: '', contenttype: '', headers: {}, forwardheaders: [], resultroot: undefined, errorroot: undefined, ErrorClass: RestError, ...opts,
+    name: 'rise', baseURL: '', contenttype: '', headers: {}, forwardheaders: [], resultroot: undefined, errorroot: undefined, ErrorClass: RestError, ...opts,
   };
-  return (schema) => mapSchema(schema, {
+  return {
+    riseDirectiveTypeDefs: getRiseDirectiveTypeDefs(options.name),
+    riseDirectiveTransformer: (schema) => mapSchema(schema, {
       [MapperKind.OBJECT_FIELD]: (fieldConfig) => {
-        const riseDirective = getDirective(schema, fieldConfig, 'rise')?.[0];
+        const riseDirective = getDirective(schema, fieldConfig, options.name)?.[0];
 
         if (riseDirective) {
           let {
@@ -155,5 +158,6 @@ export function riseDirectiveTransformer(
 
         return fieldConfig;
       },
-    });
+    }),
+};
 }
