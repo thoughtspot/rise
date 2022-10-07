@@ -137,13 +137,18 @@ export function rise(
                     const error = (errorroot ? _.get(payload, errorroot) : payload) || {};
                     throw new options.ErrorClass(response.statusText, response.status, error);
                   } catch (e) {
-                    throw new options.ErrorClass(response.statusText, response.status);
+                    throw new options.ErrorClass(response.statusText, response.status, e);
                   }
                 }
 
-                return response.json();
+                return (fieldConfig.type.toString() === 'Void')
+                  ? response.text() : response.json();
               })
               .then((data: any) => {
+                if (!data || typeof data === 'string') {
+                  return data;
+                }
+
                 if (resultroot) {
                   data = _.get(data, resultroot); // TODO: support items[].field
                 }

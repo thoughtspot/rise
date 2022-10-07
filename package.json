@@ -1,8 +1,8 @@
 {
   "name": "@thoughtspot/rise",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "Rise above the REST with GraphQL",
-  "main": "dist/cjs/index.js",
+  "main": "dist/index.js",
   "scripts": {
     "check": "eslint 'src/**'",
     "test": "npm run check; jest",
