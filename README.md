@@ -3,6 +3,12 @@
 
 Rise above "REST". A declarative schema driven way to convert REST endpoints to GraphQL.
 
+## Installation
+
+```
+npm i @thoughtspot/rise
+```
+
 ## Usage
 
 ```graphql
