@@ -7,11 +7,11 @@ Rise above "REST". A declarative schema driven way to convert REST endpoints to 
 ```graphql
 type Query {
   getUser(id: String!): User!
-  @rise(
-    path: "/v1/user", 
+  @myAwesomeService(
+    path: "/v1/user/$id", 
     method: "GET",
     headers: {
-      "Authorization": "Bearer abcde"
+      "accept": "application/json"
     },
     contenttype: "application/json",
     resultroot: "data",
@@ -21,25 +21,51 @@ type Query {
     }]
   )
 }
+
+type Mutation {
+  createUser(name: String!, groups: [String!], email: String, phone: String, address: String): User!
+  @myAwesomeService(
+    path: "/v1/user"
+    method: "POST",
+    contenttype: "application/x-www-form-urlencoded",
+    resultroot: "data",
+    errorroot: "error",
+    postbody: """
+    {
+      "username": "<%= args.name %>",
+      "groups": "<%= JSON.stringify(args.groups) %>",
+      "properties": {
+        "email": "<%= args.email %>",
+        "address": "<%= args.address %>",
+        "phone": "<%= args.phone %>",
+      }
+    }
+    """
+  )
+}
 ```
 
 ```js
-import { riseDirectiveTransformer, riseDirectiveTypeDefs } from "@thoughtspot/rise";
+import { rise } from "@thoughtspot/rise";
 import { buildSchema } from 'graphql';
 import typeDefs from 'schema.graphql'; // Or your preferred method.
+
+
+const  { riseDirectiveTransformer, riseDirectiveTypeDefs } = rise({
+  baseURL: "https://api.service.com/",
+  forwardheaders: ["cookie", "Authorization"],
+  name: 'myAwesomeService',
+  /* 
+    Can also specify other directive props here which apply to all REST calls
+  */
+});
 
 let schema = buildSchema([
   riseDirectiveTypeDefs,
   typeDefs,
 ]);
 
-schema = riseDirectiveTransformer({
-  baseURL: "https://api.service.com/",
-  forwardheaders: ["cookie"],
-  /* 
-    Can also specify other directive props here which apply to all REST calls
-  */
-})(schema);
+schema = riseDirectiveTransformer(schema);
 
 // .. Serve the schema using your favorite Graphql Server.
 ```
