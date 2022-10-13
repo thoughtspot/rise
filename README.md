@@ -1,4 +1,5 @@
 # Rise
+[![npm version](https://badge.fury.io/js/@thoughtspot%2Frise.svg)](https://badge.fury.io/js/@thoughtspot%2Frise) ![NodeJS Build](https://github.com/thoughtspot/rise/actions/workflows/main.yml/badge.svg) [![Coverage Status](https://coveralls.io/repos/github/thoughtspot/rise/badge.svg?branch=main)](https://coveralls.io/github/thoughtspot/rise?branch=main)
 
 Rise above "REST". A declarative schema driven way to convert REST endpoints to GraphQL.
 
