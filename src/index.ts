@@ -14,7 +14,8 @@ class RestError extends Error {
 }
 
 function generateBodyFromTemplate(template, args) {
-  return _.template(template)(args);
+  const body = _.template(template)({ args });
+  return JSON.parse(body);
 }
 
 function autogenerateBody(args) {
@@ -27,6 +28,7 @@ function formatForContentType(body, contenttype) {
   }
 
   if (contenttype === 'application/x-www-form-urlencoded') {
+    body = _.mapValues(body, (v) => ((typeof v === 'object') ? JSON.stringify(v) : v));
     return new URLSearchParams(body).toString();
   }
 
@@ -106,11 +108,14 @@ export function rise(
           };
           const url = nodePath.join(options.baseURL, path);
           forwardheaders.push(...options.forwardheaders);
-
+          forwardheaders = forwardheaders.map((h) => h.toLowerCase());
           fieldConfig.resolve = (source, args, context, info) => {
             let urlToFetch = url;
             let body: any;
-            Object.assign(headers, _.pick(context.req.headers, forwardheaders));
+            Object.assign(
+              headers,
+              _.pickBy(context.req.headers, (v, h) => forwardheaders.includes(h.toLowerCase())),
+            );
 
             if (args) {
               Object.keys(args).forEach((arg) => {
@@ -129,6 +134,7 @@ export function rise(
               method,
               headers: { ...options.headers, ...headers },
               body,
+              credentials: 'include',
             })
               .then(async (response) => {
                 if (!response.ok) {
