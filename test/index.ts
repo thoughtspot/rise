@@ -97,7 +97,53 @@ describe('Should call the Target', () => {
 describe('Should return the correct data', () => {
   test.todo('when there is no resultroot');
 
-  test.todo('when there is a resultroot');
+  test.only('when there is a resultroot and data is an array', () => {
+    nock('https://rise.com/callosum/v1', {
+    })
+    .post('/v2/search')
+    .reply(200, (...args) => {
+      console.log('hello', args);
+      return {
+        data: [{
+          id: '123',
+          name: 'John',
+          email: 'john@doe.com',
+          extra: 'extra',
+        }, {
+          id: '456',
+          name: 'Jane',
+          email: 'jane@doe.com',
+        }],
+      };
+    });
+
+    return graphql({
+      schema,
+      source: `
+        query {
+          search(query: "foo") {
+            name
+            id
+          }
+        }
+      `,
+      contextValue: {
+        req: {
+          headers: {
+            Authorization: 'Bearer 123',
+            cookie: 'a=a',
+            foo: 'bar',
+          },
+        },
+      },
+    }).then((response: any) => {
+      expect(response?.data?.search.length).toBe(2);
+      expect(response?.data?.search[0]).toMatchObject({
+        name: 'John',
+        id: '123',
+      });
+    });
+  });
 
   test.todo('when there are setters');
 });

@@ -47,10 +47,21 @@ function transformWithSetters(
   data: any,
   setters: { field: string; path: string }[],
 ) {
-  const result = { ...data };
-  setters.forEach((setter) => {
-    _.set(result, setter.field, _.get(data, setter.path));
-  });
+  let result = data;
+  if (!Array.isArray(data)) {
+    result = { ...result };
+    setters.forEach((setter) => {
+      _.set(result, setter.field, _.get(data, setter.path));
+    });
+  } else {
+    result = data.map((item) => {
+      const newItem = { ...item };
+      setters.forEach((setter) => {
+        _.set(newItem, setter.field, _.get(item, setter.path));
+      });
+      return newItem;
+    });
+  }
   return result;
 }
 
@@ -158,6 +169,7 @@ export function rise(
                 if (resultroot) {
                   data = _.get(data, resultroot); // TODO: support items[].field
                 }
+
                 if (setters) {
                   return transformWithSetters(data, setters);
                 }

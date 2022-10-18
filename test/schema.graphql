@@ -54,6 +54,9 @@
   type Query {
     getSessionDetails: User! 
     @service(path: "/v2/auth/session/user", method: "GET")
+
+    search(query: String!): [User]!
+    @service(path: "/v2/search", method: "POST")
   }
 
   type Mutation {
