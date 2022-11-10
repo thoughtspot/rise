@@ -130,7 +130,9 @@ export function rise(
 
             if (args) {
               Object.keys(args).forEach((arg) => {
-                urlToFetch = urlToFetch.replace(`$${arg}`, args[arg]);
+                if (typeof args[arg] !== 'object') {
+                  urlToFetch = urlToFetch.replace(`$${arg}`, args[arg]);
+                }
               });
             }
 
