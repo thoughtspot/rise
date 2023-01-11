@@ -111,6 +111,13 @@ type Mutation {
 }
 ```
 
+## Architecture
+
+<img src="https://raw.githubusercontent.com/thoughtspot/rise/main/Untitled(2).jpg" width=600 alt="ThoughtSpot" />
+<br>
+
+
+
 ## Credits
 
 Heavily inspired from [StepZen](https://stepzen.com/docs/custom-graphql-directives/directives#-rest).
