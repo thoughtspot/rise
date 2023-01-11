@@ -96,6 +96,8 @@ type Mutation {
     # postbody can be used to create a custom body for a POST request,
     # this is a lodash template and access to the graphql params is
     # via the `args` keyword.
+    # The post body is automatically created from `args` if this option
+    # is omitted.
     postbody: """
     {
       "username": "<%= args.name %>",
