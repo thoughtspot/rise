@@ -18,9 +18,11 @@ import typeDefs from './schema.graphql'; // Or your preferred method.
 
 
 const  { riseDirectiveTransformer, riseDirectiveTypeDefs } = rise({
-  baseURL: "https://api.service.com/", // Base URL of the underlying REST Service.
-  forwardheaders: ["cookie", "Authorization"], // Forward these headers from the graphql call to REST server.
-  name: 'myAwesomeService', // this is the name of the dynamically created directive.
+  baseURL: "https://api.service.com/",          // Base URL of the underlying REST Service.
+  forwardheaders: ["cookie", "Authorization"],  // Forward these headers from the graphql call to REST server.
+  name: 'myAwesomeService',                     // this is the name of the dynamically created directive.
+  ErrorClass: ApolloError                       // The errors will be thrown from the directive wrapped in an instance of this class
+                                                // can be put to "ApolloError" for example to easily use Apollo's error system.
   /* 
     Can also specify other directive props here which apply to all REST calls,
     Look at the usage below for all possible props.
