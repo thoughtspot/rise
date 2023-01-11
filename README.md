@@ -50,6 +50,8 @@ schema = riseDirectiveTransformer(schema);
 ```
 
 ```graphql
+# schema.graphql
+
 type Query {
   getUser(id: String!): User!
   @myAwesomeService(
