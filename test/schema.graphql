@@ -20,6 +20,7 @@
     tenant_id: String,
     user_groups: [UserGroup],
     display_name: String,
+    key: String
   }
 
   type TokenResponse {
@@ -53,7 +54,13 @@
 
   type Query {
     getSessionDetails: User! 
-    @service(path: "/v2/auth/session/user", method: "GET")
+    @service(
+      path: "/v2/auth/session/user",
+      method: "GET",
+      setters: [{
+        path: "nested"
+      }]
+    )
 
     search(query: String!): [User]!
     @service(path: "/v2/search", method: "POST")
@@ -63,7 +70,7 @@
     login(username: String!, password: String!): Void 
     @service(path: "/v2/auth/session/login", method: "POST"),
 
-    createToken(username: String!,
+    createToken(usernasme: String!,
      credential: Credential!,
      scope: Scope!, 
      validity_time_in_sec: Int!): TokenResponse!

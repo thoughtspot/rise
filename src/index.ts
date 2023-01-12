@@ -43,6 +43,14 @@ function formatForContentType(body, contenttype) {
   return body;
 }
 
+function setOrAssign(target, setter, data) {
+  if (setter.field) {
+    _.set(target, setter.field, _.get(data, setter.path));
+  } else {
+    _.assign(target, _.get(data, setter.path));
+  }
+}
+
 function transformWithSetters(
   data: any,
   setters: { field: string; path: string }[],
@@ -51,13 +59,13 @@ function transformWithSetters(
   if (!Array.isArray(data)) {
     result = { ...result };
     setters.forEach((setter) => {
-      _.set(result, setter.field, _.get(data, setter.path));
+      setOrAssign(result, setter, data);
     });
   } else {
     result = data.map((item) => {
       const newItem = { ...item };
       setters.forEach((setter) => {
-        _.set(newItem, setter.field, _.get(item, setter.path));
+        setOrAssign(newItem, setter, data);
       });
       return newItem;
     });
@@ -68,7 +76,7 @@ function transformWithSetters(
 export const getRiseDirectiveTypeDefs = (name: string) => `
   scalar JSON
   input RiseSetter {
-    field: String!
+    field: String
     path: String!
   }
   directive @${name}(path: String!, method: String, headers: JSON, 
@@ -169,7 +177,12 @@ export function rise(
                 }
 
                 if (resultroot) {
-                  data = _.get(data, resultroot); // TODO: support items[].field
+                  if (Array.isArray(resultroot)) {
+                    data = resultroot
+                      .reduce((res, root) => Object.assign(res, _.get(data, root)), {});
+                  } else {
+                    data = _.get(data, resultroot); // TODO: support items[].field
+                  }
                 }
 
                 if (setters) {
@@ -184,5 +197,5 @@ export function rise(
         return fieldConfig;
       },
     }),
-};
+  };
 }

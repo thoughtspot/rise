@@ -10,7 +10,7 @@ import { rise } from '../src/index';
 
 const typeDefs = fs.readFileSync(path.join(__dirname, './schema.graphql'), 'utf8');
 
-class ApolloError extends Error {}
+class ApolloError extends Error { }
 
 const { riseDirectiveTransformer, riseDirectiveTypeDefs } = rise({
   baseURL: 'https://rise.com/callosum/v1',
@@ -49,18 +49,21 @@ describe('Should call the Target', () => {
         cookie: 'a=a',
       },
     })
-    .get('/v2/auth/session/user')
-    .reply(200, function () {
-      console.log(this.req.headers);
-      return {
-        data: {
-          id: '123',
-          name: 'John',
-          email: 'john@doe.com',
-          extra: 'extra',
-        },
-      };
-    });
+      .get('/v2/auth/session/user')
+      .reply(200, function () {
+        console.log(this.req.headers);
+        return {
+          data: {
+            id: '123',
+            name: 'John',
+            email: 'john@doe.com',
+            extra: 'extra',
+            nested: {
+              key: 'value',
+            },
+          },
+        };
+      });
 
     return graphql({
       schema,
@@ -70,6 +73,7 @@ describe('Should call the Target', () => {
             name
             email
             id
+            key
           }
         }
       `,
@@ -87,6 +91,7 @@ describe('Should call the Target', () => {
         name: 'John',
         email: 'john@doe.com',
         id: '123',
+        key: 'value',
       });
     });
   });
@@ -97,25 +102,25 @@ describe('Should call the Target', () => {
 describe('Should return the correct data', () => {
   test.todo('when there is no resultroot');
 
-  test.only('when there is a resultroot and data is an array', () => {
+  test('when there is a resultroot and data is an array', () => {
     nock('https://rise.com/callosum/v1', {
     })
-    .post('/v2/search')
-    .reply(200, (...args) => {
-      console.log('hello', args);
-      return {
-        data: [{
-          id: '123',
-          name: 'John',
-          email: 'john@doe.com',
-          extra: 'extra',
-        }, {
-          id: '456',
-          name: 'Jane',
-          email: 'jane@doe.com',
-        }],
-      };
-    });
+      .post('/v2/search')
+      .reply(200, (...args) => {
+        console.log('hello', args);
+        return {
+          data: [{
+            id: '123',
+            name: 'John',
+            email: 'john@doe.com',
+            extra: 'extra',
+          }, {
+            id: '456',
+            name: 'Jane',
+            email: 'jane@doe.com',
+          }],
+        };
+      });
 
     return graphql({
       schema,
