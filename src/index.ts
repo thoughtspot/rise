@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 import { mapSchema, getDirective, MapperKind } from '@graphql-tools/utils';
 import fetch from 'node-fetch';
 import _ from 'lodash';
@@ -106,7 +107,6 @@ export function rise(
     riseDirectiveTransformer: (schema) => mapSchema(schema, {
       [MapperKind.OBJECT_FIELD]: (fieldConfig) => {
         const riseDirective = getDirective(schema, fieldConfig, options.name)?.[0];
-
         if (riseDirective) {
           let {
             path,
@@ -128,6 +128,7 @@ export function rise(
           const url = nodePath.join(options.baseURL, path);
           forwardheaders.push(...options.forwardheaders);
           forwardheaders = forwardheaders.map((h) => h.toLowerCase());
+
           fieldConfig.resolve = (source, args, context, info) => {
             let urlToFetch = url;
             let body: any;
@@ -136,13 +137,13 @@ export function rise(
               _.pickBy(context.req.headers, (v, h) => forwardheaders.includes(h.toLowerCase())),
             );
 
-            if (args) {
-              Object.keys(args).forEach((arg) => {
-                if (typeof args[arg] !== 'object') {
-                  urlToFetch = urlToFetch.replace(`$${arg}`, args[arg]);
-                }
-              });
-            }
+            args = { ...args, ...source?.__args };
+
+            Object.keys(args).forEach((arg) => {
+              if (typeof args[arg] !== 'object') {
+                urlToFetch = urlToFetch.replace(`$${arg}`, args[arg]);
+              }
+            });
 
             if (method !== 'GET' && method !== 'HEAD') {
               body = postbody
@@ -151,6 +152,7 @@ export function rise(
               body = formatForContentType(body, contenttype);
             }
 
+            console.debug('[Rise] Downstream URL', urlToFetch);
             return fetch(urlToFetch, {
               method,
               headers: { ...options.headers, ...headers },
@@ -172,8 +174,9 @@ export function rise(
                   ? response.text() : response.json();
               })
               .then((data: any) => {
+                let result;
                 if (!data || typeof data === 'string') {
-                  return data;
+                  result = data;
                 }
 
                 if (resultroot) {
@@ -185,11 +188,14 @@ export function rise(
                   }
                 }
 
-                if (setters) {
-                  return transformWithSetters(data, setters);
+                result = data;
+                if (setters.length > 0) {
+                  result = transformWithSetters(data, setters);
                 }
 
-                return data;
+                // eslint-disable-next-line no-underscore-dangle
+                result.__args = args;
+                return result;
               });
           };
         }

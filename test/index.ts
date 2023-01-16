@@ -97,6 +97,65 @@ describe('Should call the Target', () => {
   });
 
   test.todo('with the correct body');
+
+  test('Nested query', async () => {
+    nock('https://rise.com/callosum/v1', {
+      reqheaders: {
+        Authorization: 'Bearer 123',
+        cookie: 'a=a',
+      },
+    })
+      .post('/v2/users/search')
+      .reply(200, () => ({
+        data: {
+          id: '123',
+          name: 'John',
+          email: 'john@doe.com',
+          extra: 'extra',
+        },
+      }));
+
+    nock('https://rise.com/callosum/v1', {
+      reqheaders: {
+        Authorization: 'Bearer 123',
+        cookie: 'a=a',
+      },
+    })
+      .get('/v2/users/foo/history?from=2020-01-01')
+      .reply(200, () => ({
+        data: ['txn1', 'txn2'],
+      }));
+
+    return graphql({
+      schema,
+      source: `
+          mutation {
+            getUser(identifier: "foo") {
+              name
+              email
+              id
+              history(from: "2020-01-01")
+            }
+          }
+        `,
+      contextValue: {
+        req: {
+          headers: {
+            Authorization: 'Bearer 123',
+            cookie: 'a=a',
+            foo: 'bar',
+          },
+        },
+      },
+    }).then((response) => {
+      expect(response?.data?.getUser).toMatchObject({
+        name: 'John',
+        email: 'john@doe.com',
+        id: '123',
+        history: ['txn1', 'txn2'],
+      });
+    });
+  });
 });
 
 describe('Should return the correct data', () => {
@@ -106,21 +165,18 @@ describe('Should return the correct data', () => {
     nock('https://rise.com/callosum/v1', {
     })
       .post('/v2/search')
-      .reply(200, (...args) => {
-        console.log('hello', args);
-        return {
-          data: [{
-            id: '123',
-            name: 'John',
-            email: 'john@doe.com',
-            extra: 'extra',
-          }, {
-            id: '456',
-            name: 'Jane',
-            email: 'jane@doe.com',
-          }],
-        };
-      });
+      .reply(200, (...args) => ({
+        data: [{
+          id: '123',
+          name: 'John',
+          email: 'john@doe.com',
+          extra: 'extra',
+        }, {
+          id: '456',
+          name: 'Jane',
+          email: 'jane@doe.com',
+        }],
+      }));
 
     return graphql({
       schema,

@@ -21,6 +21,11 @@
     user_groups: [UserGroup],
     display_name: String,
     key: String
+    history(from: String): [String]
+    @service(
+      path: "/v2/users/$identifier/history?from=$from",
+      method: "GET"
+    )
   }
 
   type TokenResponse {
@@ -85,9 +90,9 @@
     ),
 
 
-    getUser(indentifier: String!): User!
+    getUser(identifier: String!): User!
     @service(
-      path: "/v2/users/search"
+      path: "/v2/users/search",
       method: "POST",
       postbody: """
       {
