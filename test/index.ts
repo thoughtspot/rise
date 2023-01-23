@@ -52,6 +52,10 @@ describe('Should call the Target', () => {
       .get('/v2/auth/session/user')
       .reply(200, function () {
         console.log(this.req.headers);
+        expect(this.req.headers.authorization).toEqual(['Bearer 123']);
+        expect(this.req.headers.cookie).toEqual(['a=a']);
+        expect(this.req.headers.foo).toBeUndefined();
+        expect(this.req.headers.xfoo).toEqual(['bar']);
         return {
           data: {
             id: '123',
@@ -154,6 +158,84 @@ describe('Should call the Target', () => {
         id: '123',
         history: ['txn1', 'txn2'],
       });
+    });
+  });
+
+  test('with the correct headers, for repeated call', async () => {
+    nock('https://rise.com/callosum/v1', {
+      reqheaders: {
+        Authorization: 'Bearer 123',
+        cookie: 'a=a',
+      },
+    })
+      .get('/v2/auth/session/user')
+      .reply(200, function () {
+        console.log(this.req.headers);
+        expect(this.req.headers.authorization).toEqual(['Bearer 123']);
+        expect(this.req.headers.cookie).toEqual(['a=a']);
+        return {
+          data: {
+            id: '123',
+          },
+        };
+      });
+
+    await graphql({
+      schema,
+      source: `
+          query {
+            getSessionDetails {
+              id
+            }
+          }
+        `,
+      contextValue: {
+        req: {
+          headers: {
+            Authorization: 'Bearer 123',
+            cookie: 'a=a',
+            foo: 'bar',
+          },
+        },
+      },
+    });
+
+    nock('https://rise.com/callosum/v1', {
+      reqheaders: {
+        cookie: 'a=a',
+      },
+    })
+      .get('/v2/auth/session/user')
+      .reply(200, function () {
+        console.log(this.req.headers);
+        expect(this.req.headers.authorization).toBeUndefined();
+        expect(this.req.headers.cookie).toEqual(['a=a']);
+        return {
+          data: {
+            id: '123',
+          },
+        };
+      });
+
+    return graphql({
+      schema,
+      source: `
+        query {
+          getSessionDetails {
+            id
+          }
+        }
+      `,
+      contextValue: {
+        req: {
+          headers: {
+            cookie: 'a=a',
+            foo: 'bar',
+          },
+        },
+      },
+    }).then((response) => {
+      console.log(response.data, response.errors);
     });
   });
 });

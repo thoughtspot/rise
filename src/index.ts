@@ -132,10 +132,10 @@ export function rise(
           fieldConfig.resolve = (source, args, context, info) => {
             let urlToFetch = url;
             let body: any;
-            Object.assign(
-              headers,
-              _.pickBy(context.req.headers, (v, h) => forwardheaders.includes(h.toLowerCase())),
-            );
+            const reqHeaders = {
+              ...headers,
+              ..._.pickBy(context.req.headers, (v, h) => forwardheaders.includes(h.toLowerCase())),
+            };
 
             args = { ...args, ...source?.__args };
 
@@ -155,7 +155,7 @@ export function rise(
             console.debug('[Rise] Downstream URL', urlToFetch);
             return fetch(urlToFetch, {
               method,
-              headers: { ...options.headers, ...headers },
+              headers: reqHeaders,
               body,
               credentials: 'include',
             })

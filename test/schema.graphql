@@ -65,6 +65,9 @@
       setters: [{
         path: "nested"
       }]
+      headers: {
+        Xfoo: "bar"
+      }
     )
 
     search(query: String!): [User]!
