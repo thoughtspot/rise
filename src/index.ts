@@ -193,8 +193,12 @@ export function rise(
                   result = transformWithSetters(data, setters);
                 }
 
-                // eslint-disable-next-line no-underscore-dangle
-                result.__args = args;
+                // Put arguments in the result for any nested rise calls
+                // to use.
+                if (result) {
+                  // eslint-disable-next-line no-underscore-dangle
+                  result.__args = args;
+                }
                 return result;
               });
           };

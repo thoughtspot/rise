@@ -288,5 +288,30 @@ describe('Should return the correct data', () => {
     });
   });
 
+  test.only('When there is empty data returned', async () => {
+    nock('https://rise.com/callosum/v1', {
+    })
+      .post('/v2/auth/session/login')
+      .reply(204);
+
+    return graphql({
+      schema,
+      source: `
+        mutation {
+          login(username: "foo", password: "bar") 
+        }
+      `,
+      contextValue: {
+        req: {
+          headers: {
+            Authorization: 'Bearer 123',
+          },
+        },
+      },
+    }).then((response: any) => {
+      expect(response?.data?.login).toBeNull();
+    });
+  });
+
   test.todo('when there are setters');
 });
