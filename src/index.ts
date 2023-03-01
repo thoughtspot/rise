@@ -96,6 +96,18 @@ interface RiseDirectiveOptions {
   ErrorClass: new (...args: any[]) => Error;
 }
 
+const FORWARD_RESPONSE_HEADERS = [
+  'set-cookie',
+  'x-callosum-incident-id',
+  'x-callosum-ip',
+  'x-callosum-request-time-us',
+  'x-callosum-trace-id',
+  'x-content-type-options',
+  'x-nginx-localhost',
+  'x-ua-compatible',
+  'x-xss-protection',
+];
+
 export function rise(
   opts: Partial<RiseDirectiveOptions> = {},
 ) {
@@ -131,6 +143,7 @@ export function rise(
 
           fieldConfig.resolve = (source, args, context, info) => {
             let urlToFetch = url;
+            let originalContext = context;
             let body: any;
             const reqHeaders = {
               ...headers,
@@ -169,7 +182,14 @@ export function rise(
                     throw new options.ErrorClass(response.statusText, response.status, e);
                   }
                 }
-
+                // Setting the headers returned from response
+                FORWARD_RESPONSE_HEADERS.forEach((key) => {
+                  if (key === 'set-cookie') {
+                    originalContext.res.setHeader('cookie', response.headers.raw()[key].join(';'));
+                  } else {
+                    originalContext.res.setHeader(key, response.headers.raw()[key]);
+                  }
+                })
                 return (fieldConfig.type.toString() === 'Void')
                   ? response.text() : response.json();
               })
