@@ -174,13 +174,15 @@ export function rise(
             })
               .then(async (response) => {
                 if (!response.ok) {
+                  let payload;
                   try {
-                    const payload = await response.json();
-                    const error = (errorroot ? _.get(payload, errorroot) : payload) || {};
-                    throw new options.ErrorClass(response.statusText, response.status, error);
+                    payload = await response.json();
                   } catch (e) {
                     throw new options.ErrorClass(response.statusText, response.status, e);
                   }
+
+                  const error = (errorroot ? _.get(payload, errorroot) : payload) || {};
+                  throw new options.ErrorClass(response.statusText, response.status, error);
                 }
                 // Setting the headers returned from response
                 const responseHeaders: any = response.headers.raw();
