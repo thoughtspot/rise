@@ -1,6 +1,6 @@
 {
   "name": "@thoughtspot/rise",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "Rise above the REST with GraphQL",
   "main": "dist/index.js",
   "scripts": {
