@@ -176,11 +176,16 @@ export function rise(
                 if (!response.ok) {
                   let payload;
                   try {
-                    payload = await response.json();
+                    const contentType = response.headers.get('Content-Type');
+                    const isTextContent = contentType && contentType.includes('text');
+                    if (isTextContent) {
+                      payload = { [errorroot]: { message: await response.text() } };
+                    } else {
+                      payload = await response.json();
+                    }
                   } catch (e) {
                     throw new options.ErrorClass(response.statusText, response.status, e);
                   }
-
                   const error = (errorroot ? _.get(payload, errorroot) : payload) || {};
                   throw new options.ErrorClass(response.statusText, response.status, error);
                 }
