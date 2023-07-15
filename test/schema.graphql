@@ -99,7 +99,7 @@
       method: "POST",
       postbody: """
       {
-        "user_identifier": "<%= args.indentifier%>"
+        "user_identifier": "<%= args.identifier%>"
       }
       """
     ),
