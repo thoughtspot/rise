@@ -12,8 +12,10 @@ const typeDefs = fs.readFileSync(path.join(__dirname, './schema.graphql'), 'utf8
 
 class ApolloError extends Error { }
 
+const BASE_URL = 'https://rise.com/callosum/v1';
+
 const { riseDirectiveTransformer, riseDirectiveTypeDefs } = rise({
-  baseURL: 'https://rise.com/callosum/v1',
+  baseURL: BASE_URL,
   forwardheaders: ['Authorization', 'cookie'],
   contenttype: 'application/x-www-form-urlencoded',
   resultroot: 'data',
@@ -288,7 +290,7 @@ describe('Should return the correct data', () => {
     });
   });
 
-  test.only('When there is empty data returned', async () => {
+  test('When there is empty data returned', async () => {
     nock('https://rise.com/callosum/v1', {
     })
       .post('/v2/auth/session/login')
@@ -314,4 +316,88 @@ describe('Should return the correct data', () => {
   });
 
   test.todo('when there are setters');
+});
+
+class TestError extends Error {
+  statusText: string;
+
+  status: number;
+
+  message: string;
+
+  constructor(statusText: string, status: number, message: string) {
+    super();
+    this.statusText = statusText;
+    this.status = status;
+    this.message = JSON.stringify(message);
+  }
+}
+
+describe('Parse data according to the content type', () => {
+  const {
+    riseDirectiveTransformer: riseDirectiveTransformerTest,
+    riseDirectiveTypeDefs: riseDirectiveTypeDefsTest,
+  } = rise({
+    baseURL: BASE_URL,
+    forwardheaders: ['Authorization', 'cookie'],
+    contenttype: 'application/x-www-form-urlencoded',
+    resultroot: 'data',
+    errorroot: 'errorTest',
+    ErrorClass: TestError,
+    name: 'service',
+  });
+
+  let schemaTest = buildSchema([riseDirectiveTypeDefsTest, typeDefs].join('\n'));
+
+  schemaTest = riseDirectiveTransformerTest(schemaTest);
+
+  test('when text/html is returned as error', () => {
+    nock(BASE_URL, {}).post('/v2/search')
+      .reply(500, '<html></html>', {
+        'Content-Type': 'text/html',
+      });
+    return graphql({
+      schema: schemaTest,
+      source: `
+      query {
+        search(query: "foo") {
+          name
+          id
+        }
+      }
+      `,
+      contextValue: {
+        req: {},
+      },
+    }).then(async (res) => {
+      expect(res?.errors?.[0].message).toEqual(JSON.stringify({
+        message: '<html></html>',
+      }));
+    });
+  });
+
+  test('when application/json is returned as error', () => {
+    nock(BASE_URL, {}).post('/v2/search')
+      .reply(400, { errorTest: { message: { debug: 'Some error' } } }, {
+        'Content-Type': 'application/json',
+      });
+    return graphql({
+      schema: schemaTest,
+      source: `
+      query {
+        search(query: "foo") {
+          name
+          id
+        }
+      }
+      `,
+      contextValue: {
+        req: {},
+      },
+    }).then(async (res) => {
+      expect(res?.errors?.[0].message).toEqual(JSON.stringify({
+        message: { debug: 'Some error' },
+      }));
+    });
+  });
 });
