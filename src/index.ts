@@ -165,8 +165,9 @@ export function rise(
               body = formatForContentType(body, contenttype);
             }
 
-            if(reqHeaders["Content-Type"] === 'multipart/form-data' && body._boundary)
-              reqHeaders["Content-Type"] = "multipart/form-data; boundary="+body._boundary;
+            if (reqHeaders['Content-Type'] === 'multipart/form-data' && body._boundary) {
+              reqHeaders['Content-Type'] = `multipart/form-data; boundary=${body._boundary}`;
+            }
 
             console.debug('[Rise] Downstream URL', urlToFetch);
             return fetch(urlToFetch, {
@@ -195,9 +196,9 @@ export function rise(
                 // Setting the headers returned from response
                 const responseHeaders: any = response.headers.raw();
                 FORWARD_RESPONSE_HEADERS.forEach((key) => {
-                    if (responseHeaders[key]) {
-                      originalContext.res.setHeader(key, responseHeaders[key]);
-                    }
+                  if (responseHeaders[key]) {
+                    originalContext.res.setHeader(key, responseHeaders[key]);
+                  }
                 });
                 return (fieldConfig.type.toString() === 'Void')
                   ? response.text() : response.json();
