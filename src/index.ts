@@ -33,7 +33,7 @@ function formatForContentType(body, contenttype) {
     return new URLSearchParams(body).toString();
   }
 
-  if (contenttype.startsWith("multipart/form-data")) {
+  if (contenttype === "multipart/form-data") {
     const formData = new FormData();
     Object.keys(body).forEach((key) => {
       formData.append(key, body[key]);
@@ -165,7 +165,7 @@ export function rise(
               body = formatForContentType(body, contenttype);
             }
 
-            if(reqHeaders["Content-Type"].startsWith('multipart/form-data') && body._boundary)
+            if(reqHeaders["Content-Type"] === 'multipart/form-data' && body._boundary)
               reqHeaders["Content-Type"] = "multipart/form-data; boundary="+body._boundary;
 
             console.debug('[Rise] Downstream URL', urlToFetch);
