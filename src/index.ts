@@ -33,7 +33,7 @@ function formatForContentType(body, contenttype) {
     return new URLSearchParams(body).toString();
   }
 
-  if (contenttype === "multipart/form-data") {
+  if (contenttype === 'multipart/form-data') {
     const formData = new FormData();
     Object.keys(body).forEach((key) => {
       formData.append(key, body[key]);
