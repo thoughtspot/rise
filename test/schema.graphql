@@ -103,4 +103,16 @@
       }
       """
     ),
+
+    getUserMultiPart(identifier: String!): User
+    @service(
+      path: "/v2/users/multipart",
+      method: "POST",
+      contenttype: "multipart/form-data"
+      postbody: """
+      {
+        "user_identifier": "<%= args.identifier%>"
+      }
+      """
+    ),
   }
