@@ -400,4 +400,34 @@ describe('Parse data according to the content type', () => {
       }));
     });
   });
+
+  test('when multipart/form-data contenttype is used', () => {
+    nock(BASE_URL, {
+      reqheaders: {
+        'Content-Type': (headerValue) => {
+          expect(headerValue).toMatch(/^multipart\/form-data; boundary=/);
+          return true;
+        },
+      },
+    })
+      .post('/v2/users/multipart')
+      .reply(200, (...args) => ({ data: { name: 'success' } }), {
+        'Content-Type': 'application/json',
+      });
+    return graphql({
+      schema: schemaTest,
+      source: `
+      mutation {
+        getUserMultiPart(identifier: "test") {
+          name
+        }
+      }
+      `,
+      contextValue: {
+        req: {},
+      },
+    }).then(async (res) => {
+      expect((res?.data as any)?.getUserMultiPart?.name).toBe('success');
+    });
+  });
 });
