@@ -36,7 +36,7 @@ function formatForContentType(body, contenttype) {
   if (contenttype === 'multipart/form-data') {
     const formData = new FormData();
     Object.keys(body).forEach((key) => {
-      const value = typeof body[key] === 'string' ? body[key] : JSON.stringify(body[key])
+      const value = typeof body[key] === 'string' ? body[key] : JSON.stringify(body[key]);
       formData.append(key, value);
     });
     return formData;
