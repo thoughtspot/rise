@@ -180,17 +180,25 @@ export function rise(
               .then(async (response) => {
                 if (!response.ok) {
                   let payload;
-                  try {
-                    const contentType = response.headers.get('Content-Type');
-                    const isTextContent = contentType && contentType.includes('text');
-                    if (isTextContent) {
-                      payload = { [errorroot]: { message: await response.text() } };
-                    } else {
-                      payload = await response.json();
+                  try{
+                      const contentType = response.headers.get('Content-Type');
+                      const isJsonContent = contentType && contentType.includes('application/json');
+                      const isTextContent = contentType && contentType.includes('text');
+                      if (isJsonContent) {
+                        try {
+                          payload = await response.json();
+                        } catch (jsonError) {
+                          payload = { error: "Received unparsable JSON response from the server." };
+                        }
+                      } else if (isTextContent) {
+                        const textResponse = await response.text();
+                        payload = { error: textResponse || "No error message provided by the server." };
+                      } else {
+                        payload = { error: "Unsupported content type in server response." };
+                      }
+                    } catch (e : any) {
+                      throw new options.ErrorClass(response.statusText, response.status, e);
                     }
-                  } catch (e) {
-                    throw new options.ErrorClass(response.statusText, response.status, e);
-                  }
                   const error = (errorroot ? _.get(payload, errorroot) : payload) || {};
                   throw new options.ErrorClass(response.statusText, response.status, error);
                 }
