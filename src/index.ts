@@ -181,24 +181,23 @@ export function rise(
                 if (!response.ok) {
                   let payload;
                   try {
-                      const contentType = response.headers.get('Content-Type');
-                      const isJsonContent = contentType && contentType.includes('application/json');
-                      const isTextContent = contentType && contentType.includes('text');
-                      if (isJsonContent) {
-                        try {
-                          payload = await response.json();
-                        } catch (jsonError) {
-                          payload = { message: 'Received unparsable JSON response from the server.' };
-                        }
-                      } else if (isTextContent) {
-                        const textResponse = await response.text();
-                        payload = { message: textResponse || 'No error message provided by the server.' };
-                      } else {
-                        payload = { message: 'Unsupported content type in server response.' };
+                    const contentType = response.headers.get('Content-Type');
+                    const isJsonContent = contentType && contentType.includes('application/json');
+                    const isTextContent = contentType && contentType.includes('text');
+                    if (isJsonContent) {
+                      try {
+                        payload = await response.json();
+                      } catch (jsonError) {
+                        payload = { [errorroot]: { message: 'Received unparsable JSON response from the server.' } };
                       }
-                    } catch (e : any) {
-                      throw new options.ErrorClass(response.statusText, response.status, e);
+                    } else if (isTextContent) {
+                      payload = { [errorroot]: { message: await response.text() } };
+                    } else {
+                      payload = { [errorroot]: { message: 'Unsupported content type in server response.' } };
                     }
+                  } catch (e) {
+                    throw new options.ErrorClass(response.statusText, response.status, e);
+                  }
                   const error = (errorroot ? _.get(payload, errorroot) : payload) || {};
                   throw new options.ErrorClass(response.statusText, response.status, error);
                 }
