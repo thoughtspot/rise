@@ -180,7 +180,7 @@ export function rise(
               .then(async (response) => {
                 if (!response.ok) {
                   let payload;
-                  try{
+                  try {
                       const contentType = response.headers.get('Content-Type');
                       const isJsonContent = contentType && contentType.includes('application/json');
                       const isTextContent = contentType && contentType.includes('text');
@@ -188,13 +188,13 @@ export function rise(
                         try {
                           payload = await response.json();
                         } catch (jsonError) {
-                          payload = { error: "Received unparsable JSON response from the server." };
+                          payload = { error: 'Received unparsable JSON response from the server.' };
                         }
                       } else if (isTextContent) {
                         const textResponse = await response.text();
-                        payload = { error: textResponse || "No error message provided by the server." };
+                        payload = { error: textResponse || 'No error message provided by the server.' };
                       } else {
-                        payload = { error: "Unsupported content type in server response." };
+                        payload = { error: 'Unsupported content type in server response.' };
                       }
                     } catch (e : any) {
                       throw new options.ErrorClass(response.statusText, response.status, e);
