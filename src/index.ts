@@ -188,13 +188,13 @@ export function rise(
                         try {
                           payload = await response.json();
                         } catch (jsonError) {
-                          payload = { error: 'Received unparsable JSON response from the server.' };
+                          payload = { message: 'Received unparsable JSON response from the server.' };
                         }
                       } else if (isTextContent) {
                         const textResponse = await response.text();
-                        payload = { error: textResponse || 'No error message provided by the server.' };
+                        payload = { message: textResponse || 'No error message provided by the server.' };
                       } else {
-                        payload = { error: 'Unsupported content type in server response.' };
+                        payload = { message: 'Unsupported content type in server response.' };
                       }
                     } catch (e : any) {
                       throw new options.ErrorClass(response.statusText, response.status, e);
