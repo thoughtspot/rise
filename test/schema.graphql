@@ -72,6 +72,8 @@
 
     search(query: String!): [User]!
     @service(path: "/v2/search", method: "POST")
+
+    getGQLSessionDetails: User! @gqlrise
   }
 
   type Mutation {
