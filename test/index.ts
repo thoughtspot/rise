@@ -31,7 +31,7 @@ const { riseDirectiveTransformer: gqlTransformer, riseDirectiveTypeDefs: gqlType
   name: 'gqlrise',
   apiType: 'gql'
 });
-
+console.log([riseDirectiveTypeDefs, gqlTypeDefs, typeDefs].join('\n'));
 let schema = buildSchema([riseDirectiveTypeDefs, gqlTypeDefs, typeDefs].join('\n'));
 
 schema = gqlTransformer(riseDirectiveTransformer(schema));

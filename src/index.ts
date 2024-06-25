@@ -6,6 +6,11 @@ import { RiseDirectiveOptionsGql, gqlResolver } from './gql-resolver';
 import { RestError } from './common';
 
 export const getRiseDirectiveTypeDefs = (name: string) => `
+  scalar JSON
+  input RiseSetter {
+    field: String
+    path: String!
+  }
   directive @${name}(path: String!, method: String, headers: JSON, 
     setters: [RiseSetter], resultroot: String, postbody: String,
     forwardheaders: [String], contenttype: String) on FIELD_DEFINITION
