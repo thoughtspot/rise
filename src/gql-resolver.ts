@@ -21,7 +21,7 @@ export function gqlResolver(
             query: print(info.operation),
             variables: info.variableValues,
         });
-        const reqHeaders = getReqHeaders(riseDirective, options, context);
+        const reqHeaders = getReqHeaders(riseDirective, options, originalContext);
 
         console.debug('[Rise] Downstream URL', urlToFetch);
         return fetch(urlToFetch, {

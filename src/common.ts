@@ -50,12 +50,12 @@ export function getReqHeaders(riseDirective: RiseDirectiveOptions, options, cont
       };
 }
 
-export function processResHeaders(response, originalContext) {
+export function processResHeaders(response, context) {
     // Setting the headers returned from response
     const responseHeaders: any = response.headers.raw();
     FORWARD_RESPONSE_HEADERS.forEach((key) => {
     if (responseHeaders[key]) {
-        originalContext.res.setHeader(key, responseHeaders[key]);
+        context.res.setHeader(key, responseHeaders[key]);
     }
     });
 }
