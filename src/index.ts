@@ -154,8 +154,10 @@ export function rise(
             args = { ...args, ...source?.__args };
 
             Object.keys(args).forEach((arg) => {
-              if (typeof args[arg] !== 'object') {
-                urlToFetch = urlToFetch.replace(`$${arg}`, args[arg]);
+              if (typeof args[arg] !== 'object' || Array.isArray(args[arg])) {
+                urlToFetch = urlToFetch.replace(`$${arg}`, encodeURI(args[arg]));
+              } else {
+                urlToFetch = urlToFetch.replace(`$${arg}`, '');
               }
             });
 
