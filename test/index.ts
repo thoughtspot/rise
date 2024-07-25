@@ -53,7 +53,6 @@ describe('Should call the Target', () => {
     })
       .get('/v2/auth/session/user')
       .reply(200, function () {
-        console.log(this.req.headers);
         expect(this.req.headers.authorization).toEqual(['Bearer 123']);
         expect(this.req.headers.cookie).toEqual(['a=a']);
         expect(this.req.headers.foo).toBeUndefined();
@@ -172,7 +171,6 @@ describe('Should call the Target', () => {
     })
       .get('/v2/auth/session/user')
       .reply(200, function () {
-        console.log(this.req.headers);
         expect(this.req.headers.authorization).toEqual(['Bearer 123']);
         expect(this.req.headers.cookie).toEqual(['a=a']);
         return {
@@ -209,7 +207,6 @@ describe('Should call the Target', () => {
     })
       .get('/v2/auth/session/user')
       .reply(200, function () {
-        console.log(this.req.headers);
         expect(this.req.headers.authorization).toBeUndefined();
         expect(this.req.headers.cookie).toEqual(['a=a']);
         return {
@@ -236,8 +233,120 @@ describe('Should call the Target', () => {
           },
         },
       },
-    }).then((response) => {
-      console.log(response.data, response.errors);
+    });
+  });
+
+  describe('tests for query params', () => {
+    test('when array is passed for query params and one param is not passed', async () => {
+      nock('https://rise.com/callosum/v1')
+        .get(() => true)
+        .reply(200, function () {
+          const query = new URLSearchParams(this.req.path.split('?')[1]);
+          expect(query.get('params')).toEqual(['a c', 'b d', '1'].join(','));
+          expect(query.get('paramsInt')).toEqual('');
+          expect(query.get('test')).toEqual('yes');
+          return {
+            data: {
+              params: query.get('params'),
+              paramsInt: query.get('paramsInt'),
+            },
+          };
+        });
+      const res = await graphql({
+        schema,
+        source: `
+          mutation {
+            getUserWithQueryParam(identifier: "test", qParamsStr: ["a c", "b d", "1"]) {
+              params
+            }
+          }
+        `,
+        contextValue: {
+          req: {
+            headers: {
+              cookie: 'a=a',
+              foo: 'bar',
+            },
+          },
+        },
+      });
+
+      expect(res.errors).toBeUndefined();
+    });
+
+    test('when multiple array is passed', async () => {
+      nock('https://rise.com/callosum/v1')
+        .get(() => true)
+        .reply(200, function () {
+          const query = new URLSearchParams(this.req.path.split('?')[1]);
+          expect(query.get('params')).toEqual(['a c', 'b d', '1'].join(','));
+          expect(query.get('paramsInt')).toEqual([1, 2, 3].join(','));
+          expect(query.get('test')).toEqual('yes');
+          return {
+            data: {
+              params: query.get('params'),
+              paramsInt: query.get('paramsInt'),
+            },
+          };
+        });
+
+      const res2 = await graphql({
+        schema,
+        source: `
+        mutation {
+          getUserWithQueryParam(identifier: "test", qParamsStr: ["a c", "b d", "1"], qParamsInt: [1,2,3]) {
+            params
+          }
+        }
+      `,
+        contextValue: {
+          req: {
+            headers: {
+              cookie: 'a=a',
+              foo: 'bar',
+            },
+          },
+        },
+      });
+      expect(res2.errors).toBeUndefined();
+    });
+
+    test('when object is passed for query param', async () => {
+      nock('https://rise.com/callosum/v1')
+        .get(() => true)
+        .reply(200, function () {
+          const query = new URLSearchParams(this.req.path.split('?')[1]);
+          expect(query.get('params')).toEqual(['a c', 'b d', '1'].join(','));
+          expect(query.get('paramsInt')).toEqual([1, 2, 3].join(','));
+          expect(query.get('test')).toEqual('yes');
+          expect(query.get('paramObj')).toEqual('');
+          return {
+            data: {
+              params: query.get('params'),
+              paramsInt: query.get('paramsInt'),
+            },
+          };
+        });
+
+      const res3 = await graphql({
+        schema,
+        source: `
+        mutation {
+          getUserWithQueryParam(identifier: "test", qParamsStr: ["a c", "b d", "1"], qParamsInt: [1,2,3], paramObj: { email: "yes" }) {
+            params
+          }
+        }
+      `,
+        contextValue: {
+          req: {
+            headers: {
+              cookie: 'a=a',
+              foo: 'bar',
+            },
+          },
+        },
+      });
+      expect(res3.errors).toBeUndefined();
     });
   });
 });
