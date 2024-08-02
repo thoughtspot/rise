@@ -164,7 +164,7 @@ export function rise(
                   argToReplaceValue = encodeURI(args[arg]);
                 }
               } catch (e) {
-                console.log(`[Rise] Error encoding ${arg}, Message: ${(e as any)?.message || ''}`);
+                console.debug(`[Rise] Error encoding ${arg}, Message: ${(e as any)?.message || ''}`);
               }
 
               urlToFetch = urlToFetch.replace(argToReplace, argToReplaceValue);
