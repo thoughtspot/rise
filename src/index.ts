@@ -154,11 +154,20 @@ export function rise(
             args = { ...args, ...source?.__args };
 
             Object.keys(args).forEach((arg) => {
-              if (typeof args[arg] !== 'object' || Array.isArray(args[arg])) {
-                urlToFetch = urlToFetch.replace(`$${arg}`, encodeURI(args[arg]));
-              } else {
-                urlToFetch = urlToFetch.replace(`$${arg}`, '');
+              const argToReplace = `$${arg}`;
+              if (!urlToFetch.includes(argToReplace)) return;
+
+              let argToReplaceValue = '';
+
+             try {
+                if (typeof args[arg] !== 'object' || Array.isArray(args[arg])) {
+                  argToReplaceValue = encodeURI(args[arg]);
+                }
+              } catch (e) {
+                console.log(`[Rise] Error encoding ${arg}, Message: ${(e as any)?.message || ''}`);
               }
+
+              urlToFetch = urlToFetch.replace(argToReplace, argToReplaceValue);
             });
 
             if (method !== 'GET' && method !== 'HEAD') {

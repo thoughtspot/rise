@@ -348,6 +348,42 @@ describe('Should call the Target', () => {
       });
       expect(res3.errors).toBeUndefined();
     });
+
+    test('when array of object is passed', async () => {
+      const testIdentifier = 'test123';
+      nock('https://rise.com/callosum/v1')
+        .get(() => true)
+        .reply(200, function () {
+          const query = new URLSearchParams(this.req.path.split('?')[1]);
+          expect(this.req.path).toContain(`/v2/users/${testIdentifier}`);
+          expect(query.get('paramObj')).toEqual('');
+          return {
+            data: {
+              params: query.get('paramObj'),
+            },
+          };
+        });
+      const res = await graphql({
+        schema,
+        source: `
+        mutation {
+          getUserWithQueryParamArrayObject(identifier: "${testIdentifier}", paramObj: [{email: "hi"}]) {
+            params
+          }
+        }
+      `,
+        contextValue: {
+          req: {
+            headers: {
+              cookie: 'a=a',
+              foo: 'bar',
+            },
+          },
+        },
+      });
+
+      expect(res.errors).toBeUndefined();
+    });
   });
 });
 
