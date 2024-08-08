@@ -131,4 +131,10 @@
       path: "/v2/users/?params=$qParamsStr&paramsInt=$qParamsInt&test=yes&paramObj=$paramObj",
       method: "GET",
     ),
+
+    getUserWithQueryParamArrayObject(identifier: String!, paramObj: [ParamInput]): ParamResponse
+    @service(
+      path: "/v2/users/$identifier?paramObj=$paramObj",
+      method: "GET",
+    ),
   }
