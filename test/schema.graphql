@@ -1,4 +1,5 @@
   scalar Void
+  scalar Object
 
   type Org {
     name: String!,
@@ -75,6 +76,15 @@
 
     getGQLSessionDetails: User! @gqlrise
   }
+  
+  input ParamInput {
+    email: String
+  }
+
+  type ParamResponse {
+    params: Object
+    paramsInt: Object
+  }
 
   type Mutation {
     login(username: String!, password: String!): Void 
@@ -116,5 +126,17 @@
         "user_identifier": "<%= args.identifier%>"
       }
       """
+    ),
+
+    getUserWithQueryParam(identifier: String!, qParamsStr: [String], qParamsInt: [Int] = [], paramObj: ParamInput): ParamResponse
+    @service(
+      path: "/v2/users/?params=$qParamsStr&paramsInt=$qParamsInt&test=yes&paramObj=$paramObj",
+      method: "GET",
+    ),
+
+    getUserWithQueryParamArrayObject(identifier: String!, paramObj: [ParamInput]): ParamResponse
+    @service(
+      path: "/v2/users/$identifier?paramObj=$paramObj",
+      method: "GET",
     ),
   }
