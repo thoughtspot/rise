@@ -24,9 +24,17 @@ const { riseDirectiveTransformer, riseDirectiveTypeDefs } = rise({
   name: 'service',
 });
 
-let schema = buildSchema([riseDirectiveTypeDefs, typeDefs].join('\n'));
+const GQL_BASE_URL = 'https://rise.com/gql/v1';
 
-schema = riseDirectiveTransformer(schema);
+const { riseDirectiveTransformer: gqlTransformer, riseDirectiveTypeDefs: gqlTypeDefs } = rise({
+  baseURL: GQL_BASE_URL,
+  name: 'gqlrise',
+  apiType: 'gql'
+});
+console.log([riseDirectiveTypeDefs, gqlTypeDefs, typeDefs].join('\n'));
+let schema = buildSchema([riseDirectiveTypeDefs, gqlTypeDefs, typeDefs].join('\n'));
+
+schema = gqlTransformer(riseDirectiveTransformer(schema));
 
 beforeAll(() => {
   nock.disableNetConnect();
@@ -463,6 +471,109 @@ describe('Should return the correct data', () => {
   test.todo('when there are setters');
 });
 
+describe('Should handle gql type', () => {
+  test('when gql query is executed should return data as expected', () => {
+    nock(GQL_BASE_URL, {
+    })
+      .post('')
+      .reply(200, (...args) => ({
+        data: {
+          getGQLSessionDetails: {
+            id: '123',
+            name: 'John',
+            email: 'john@doe.com',
+            extra: 'extra',
+          },
+        }
+      }));
+
+      const contextValue = {
+        req: {
+          headers: {
+            Authorization: 'Bearer 123',
+            cookie: 'a=a',
+            foo: 'bar',
+          },
+        },
+      };
+
+    return graphql({
+      schema,
+      source: `
+        query {
+          getGQLSessionDetails {
+            name
+            email
+            id
+          }
+        }
+      `,
+      contextValue,
+    }).then((response: any) => {
+      expect(response?.data?.getGQLSessionDetails).toBeDefined();
+      expect(response?.data?.getGQLSessionDetails).toMatchObject({
+        name: 'John',
+        id: '123',
+      });
+    });
+  });
+
+  test('when there is a error in gql query, the error should be responded back', () => {
+    nock(GQL_BASE_URL, {
+    })
+      .post('')
+      .reply(500, {
+        "errors": [
+          {
+            "message": "Error: Something went wrong!",
+            "path": [
+              "getGQLSessionDetails"
+            ],
+            "extensions": {
+              "service": "UPSTREAM",
+              "code": "UPSTREAM_FAILURE",
+              "exception": {
+                "message": "Error: Something went wrong!",
+                "service": "UPSTREAM",
+                "upstreamResponse": {},
+                "stacktrace": ["GraphQLError: Error: Something went wrong!"]
+              },
+            }
+          }
+        ]
+      });
+
+      const contextValue = {
+        req: {
+          headers: {
+            Authorization: 'Bearer 123',
+            cookie: 'a=a',
+            foo: 'bar',
+          },
+        },
+      };
+
+    return graphql({
+      schema,
+      source: `
+        query {
+          getGQLSessionDetails {
+            name
+            email
+            id
+          }
+        }
+      `,
+      contextValue,
+    }).then((response: any) => {
+      expect(response?.data?.getGQLSessionDetails).toBeUndefined();
+      expect(response.errors).toBeDefined();
+      // TODO: fix error response handling add updated test here.
+    });
+  });
+
+});
+
 class TestError extends Error {
   statusText: string;
 
@@ -492,7 +603,7 @@ describe('Parse data according to the content type', () => {
     name: 'service',
   });
 
-  let schemaTest = buildSchema([riseDirectiveTypeDefsTest, typeDefs].join('\n'));
+  let schemaTest = buildSchema([riseDirectiveTypeDefsTest, gqlTypeDefs, typeDefs].join('\n'));
 
   schemaTest = riseDirectiveTransformerTest(schemaTest);
 
