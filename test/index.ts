@@ -29,7 +29,7 @@ const GQL_BASE_URL = 'https://rise.com/gql/v1';
 const { riseDirectiveTransformer: gqlTransformer, riseDirectiveTypeDefs: gqlTypeDefs } = rise({
   baseURL: GQL_BASE_URL,
   name: 'gqlrise',
-  apiType: 'gql'
+  apiType: 'gql',
 });
 console.log([riseDirectiveTypeDefs, gqlTypeDefs, typeDefs].join('\n'));
 let schema = buildSchema([riseDirectiveTypeDefs, gqlTypeDefs, typeDefs].join('\n'));
@@ -484,18 +484,18 @@ describe('Should handle gql type', () => {
             email: 'john@doe.com',
             extra: 'extra',
           },
-        }
+        },
       }));
 
-      const contextValue = {
-        req: {
-          headers: {
-            Authorization: 'Bearer 123',
-            cookie: 'a=a',
-            foo: 'bar',
-          },
+    const contextValue = {
+      req: {
+        headers: {
+          Authorization: 'Bearer 123',
+          cookie: 'a=a',
+          foo: 'bar',
         },
-      };
+      },
+    };
 
     return graphql({
       schema,
@@ -523,35 +523,35 @@ describe('Should handle gql type', () => {
     })
       .post('')
       .reply(500, {
-        "errors": [
+        errors: [
           {
-            "message": "Error: Something went wrong!",
-            "path": [
-              "getGQLSessionDetails"
+            message: 'Error: Something went wrong!',
+            path: [
+              'getGQLSessionDetails',
             ],
-            "extensions": {
-              "service": "UPSTREAM",
-              "code": "UPSTREAM_FAILURE",
-              "exception": {
-                "message": "Error: Something went wrong!",
-                "service": "UPSTREAM",
-                "upstreamResponse": {},
-                "stacktrace": ["GraphQLError: Error: Something went wrong!"]
+            extensions: {
+              service: 'UPSTREAM',
+              code: 'UPSTREAM_FAILURE',
+              exception: {
+                message: 'Error: Something went wrong!',
+                service: 'UPSTREAM',
+                upstreamResponse: {},
+                stacktrace: ['GraphQLError: Error: Something went wrong!'],
               },
-            }
-          }
-        ]
+            },
+          },
+        ],
       });
 
-      const contextValue = {
-        req: {
-          headers: {
-            Authorization: 'Bearer 123',
-            cookie: 'a=a',
-            foo: 'bar',
-          },
+    const contextValue = {
+      req: {
+        headers: {
+          Authorization: 'Bearer 123',
+          cookie: 'a=a',
+          foo: 'bar',
         },
-      };
+      },
+    };
 
     return graphql({
       schema,
@@ -571,7 +571,6 @@ describe('Should handle gql type', () => {
       // TODO: fix error response handling add updated test here.
     });
   });
-
 });
 
 class TestError extends Error {
@@ -684,6 +683,53 @@ describe('Parse data according to the content type', () => {
       },
     }).then(async (res) => {
       expect((res?.data as any)?.getUserMultiPart?.name).toBe('success');
+    });
+  });
+
+  test('when text content type is used', () => {
+    nock(BASE_URL, {
+      reqheaders: {
+        'Content-Type': (headerValue) => {
+          // backend should receive the same content type as the user sent
+          expect(headerValue).toEqual('text/plain; UTF-8');
+          return true;
+        },
+      },
+    })
+      .post('/v2/search')
+      .reply(415, (uri, body, cb) => {
+        // backend should receive the same body as the user sent
+        expect(body).toEqual('Text body passed by user');
+        cb(
+          null,
+          body,
+        );
+      }, {
+        'Content-Type': 'text',
+      });
+
+    return graphql({
+      schema: schemaTest,
+      source: `
+        query {
+          search(query: "foo") {
+            name
+            id
+          }
+        }
+        `,
+      contextValue: {
+        req: {
+          orginalHeaders: {
+            'CoNtEnT-tYpE': 'text/plain; UTF-8',
+          },
+          body: 'Text body passed by user',
+        },
+      },
+    }).then(async (res) => {
+      expect(res?.errors?.[0].message).toEqual(JSON.stringify({
+        message: 'Text body passed by user',
+      }));
     });
   });
 });
