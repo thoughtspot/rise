@@ -132,7 +132,6 @@ export function restResolver(
     const contentTypeHeaderValue = contentTypeHeaderKey && originalHeaders[contentTypeHeaderKey];
     if (contentTypeHeaderValue?.includes('text/')) {
       reqHeaders['Content-Type'] = contentTypeHeaderValue;
-      body = context.req.body;
     }
 
     console.debug('[Rise] Downstream URL', urlToFetch);
