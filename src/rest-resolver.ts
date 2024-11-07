@@ -125,6 +125,16 @@ export function restResolver(
       reqHeaders['Content-Type'] = `multipart/form-data; boundary=${body._boundary}`;
     }
 
+    // if user sends a text request, we will forward the exact to the server along with
+    // the content type
+    const originalHeaders = context.req?.orginalHeaders || {};
+    const contentTypeHeaderKey = Object.keys(originalHeaders).filter((header) => header.toLowerCase() === 'content-type')[0];
+    const contentTypeHeaderValue = contentTypeHeaderKey && originalHeaders[contentTypeHeaderKey];
+    if (contentTypeHeaderValue?.includes('text/')) {
+      reqHeaders['Content-Type'] = contentTypeHeaderValue;
+      body = context.req?.body;
+    }
+
     console.debug('[Rise] Downstream URL', urlToFetch);
     return fetch(urlToFetch, {
       method,
