@@ -103,8 +103,10 @@ export function restResolver(
 
       let argToReplaceValue = '';
       try {
-        if (typeof args[arg] !== 'object' || Array.isArray(args[arg])) {
-          argToReplaceValue = encodeURI(args[arg]);
+        // We only support path params and query params to be simple types
+        if (typeof args[arg] !== 'object') {
+          // Do not encode the value, cause path params are received encoded
+          argToReplaceValue = args[arg];
         }
       } catch (e) {
         console.debug(`[Rise] Error encoding ${arg}, Message: ${(e as any)?.message || ''}`);
