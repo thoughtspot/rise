@@ -8,27 +8,34 @@ export interface RiseDirectiveOptionsGql extends RiseDirectiveOptions {
 }
 
 /**
- * Replace the query arguments with a wrapped argument.
- * eg:
- * 
-query getSession($sessionId: String, $sessionName: String) {
-  getGQLSessionDetails(sessionId: $sessionId, sessionName: $sessionName) {
-    name
-    email
-    id
-  }
-}
-
-into 
-
-query getSession($session: Session) {
-  getGQLSessionDetails(session: $session) {
-    name
-    email
-    id
-  }
-}
- * 
+ * Wraps arguments in a object of graphql query, when a wrapping object name and Class is defined.
+ *
+ * eg: Given wrapping object name 'session' and class 'ACSession'
+ * query getSession($sessionId: String, $sessionName: String) {
+ *   getGQLSessionDetails(sessionId: $sessionId, sessionName: $sessionName) {
+ *     name
+ *     email
+ *     id
+ *   }
+ * }
+ *
+ *    ||  ||  ||  ||
+ *    \/  \/  \/  \/
+ *
+ * query getSession($session: ACSession) {
+ *   getGQLSessionDetails(session: $session) {
+ *     name
+ *     email
+ *     id
+ *   }
+ * }
+ *
+ * Also takes care of adding structuring with the object name while making graphql call and
+ * destructuring it when the response is returned.
+ *
+ * fetch('/graphql', { query, variables: {session: { sessionId, sessionName }}})
+ *  .then(res => res.session);
+ *
  */
 function wrapArgumentsInGql(query, info, argwrapper) {
     if (argwrapper.name) {
@@ -88,7 +95,7 @@ export function gqlResolver(
         });
         const reqHeaders = getReqHeaders(riseDirective, options, originalContext);
 
-        console.debug('[Rise] Downstream URL', urlToFetch);
+        console.debug('[Rise] Downstream URL', urlToFetch, body);
         return fetch(urlToFetch, {
             method: 'POST',
             headers: reqHeaders,

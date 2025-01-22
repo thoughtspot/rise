@@ -565,7 +565,7 @@ describe('Should handle gql type', () => {
     })
     // Expect Query and variables to be wrapped with the args wrapper.
       .post('', {
-        query: "query getSession($session: ICSession) {\n  getGQLSessionDetailsWithWrap(session: $session) {\n    name\n    email\n    id\n  }\n}",
+        query: `query getSession($session: ACSession) {\n  getGQLSessionDetailsWithWrap(session: $session) {\n    name\n    email\n    id\n  }\n}`,
         variables: { session: {sessionId: "1234", asd:"abc"}}}
       )
       .reply(200, (...args) => ({
@@ -655,8 +655,8 @@ describe('Should handle gql type', () => {
     return graphql({
       schema,
       source: `
-         query getSession($sessionId: String) {
-          getGQLSessionDetails(sessionId: $sessionId) {
+         query getSession($sessionId: String, $asd: String) {
+          getGQLSessionDetails(sessionId: $sessionId, asd: $asd) {
             name
             email
             id

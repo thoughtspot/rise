@@ -75,12 +75,7 @@
     @service(path: "/v2/search", method: "POST")
 
     getGQLSessionDetails(sessionId: String, asd: String): User! @gqlrise
-    getGQLSessionDetailsWithWrap(sessionId: String, asd: String): User! @gqlrise(argwrapper: {name: "session", type: "ICSession"})
-  }
-
-  input Session {
-    sessionId: String
-    asd: String
+    getGQLSessionDetailsWithWrap(sessionId: String, asd: String): User! @gqlrise(argwrapper: {name: "session", type: "ACSession"})
   }
   
   input ParamInput {
