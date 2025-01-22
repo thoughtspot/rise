@@ -539,8 +539,8 @@ describe('Should handle gql type', () => {
     return graphql({
       schema,
       source: `
-        query {
-          getGQLSessionDetails {
+        query getSession($sessionId: String, $asd: String) {
+          getGQLSessionDetails(sessionId: $sessionId, asd: $asd) {
             name
             email
             id
@@ -548,9 +548,69 @@ describe('Should handle gql type', () => {
         }
       `,
       contextValue,
+      variableValues: {
+        sessionId: '1234',
+        asd: 'abc'
+      }
     }).then((response: any) => {
       expect(response?.data?.getGQLSessionDetails).toBeDefined();
       expect(response?.data?.getGQLSessionDetails).toMatchObject({
+        name: 'John',
+        id: '123',
+      });
+    });
+  });
+  test('when gql query with args wrapper is executed should return data as expected', () => {
+    const apiScope = nock(GQL_BASE_URL, {
+    })
+    // Expect Query and variables to be wrapped with the args wrapper.
+      .post('', {
+        query: `query getSession($session: ACSession) {\n  getGQLSessionDetailsWithWrap(session: $session) {\n    name\n    email\n    id\n  }\n}`,
+        variables: { session: {sessionId: "1234", asd:"abc"}}}
+      )
+      .reply(200, (...args) => ({
+        data: {
+          session:{
+            getGQLSessionDetailsWithWrap: {
+              id: '123',
+              name: 'John',
+              email: 'john@doe.com',
+              extra: 'extra',
+            },
+          }
+        }
+      }));
+
+      const contextValue = {
+        req: {
+          headers: {
+            Authorization: 'Bearer 123',
+            cookie: 'a=a',
+            foo: 'bar',
+          },
+        },
+      };
+
+    return graphql({
+      schema,
+      source: `
+        query getSession($sessionId: String, $asd: String) {
+          getGQLSessionDetailsWithWrap(sessionId: $sessionId, asd: $asd) {
+            name
+            email
+            id
+          }
+        }
+      `,
+      contextValue,
+      variableValues: {
+        sessionId: '1234',
+        asd: 'abc'
+      }
+    }).then((response: any) => {
+      expect(apiScope.isDone()).toBe(true);
+      expect(response?.data?.getGQLSessionDetailsWithWrap).toBeDefined();
+      expect(response?.data?.getGQLSessionDetailsWithWrap).toMatchObject({
         name: 'John',
         id: '123',
       });
@@ -595,8 +655,8 @@ describe('Should handle gql type', () => {
     return graphql({
       schema,
       source: `
-        query {
-          getGQLSessionDetails {
+         query getSession($sessionId: String, $asd: String) {
+          getGQLSessionDetails(sessionId: $sessionId, asd: $asd) {
             name
             email
             id

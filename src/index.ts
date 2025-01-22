@@ -17,7 +17,11 @@ export const getRiseDirectiveTypeDefs = (name: string) => `
 `;
 
 export const getGqlRiseDirectiveTypeDefs = (name: string) => `
-  directive @${name} on FIELD_DEFINITION
+  input RiseGQLArgWrapper {
+    name: String!
+    type: String!
+  }
+  directive @${name}(argwrapper: RiseGQLArgWrapper) on FIELD_DEFINITION
 `;
 
 type RiseDirectiveOptions = RiseDirectiveOptionsRest | RiseDirectiveOptionsGql;
