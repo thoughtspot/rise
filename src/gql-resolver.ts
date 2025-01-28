@@ -30,8 +30,7 @@ export interface RiseDirectiveOptionsGql extends RiseDirectiveOptions {
  *   }
  * }
  *
- * Also takes care of adding structuring with the object name while making graphql call and
- * destructuring it when the response is returned.
+ * Also takes care of adding structuring with the object name while making graphql call.
  *
  * fetch('/graphql', { query, variables: {session: { sessionId, sessionName }}})
  *  .then(res => res.session);
@@ -113,10 +112,6 @@ export function gqlResolver(
                         response.status,
                         response.errors,
                     );
-                }
-
-                if (wrappingObject) {
-                    return response.data[wrappingObject]?.[info.fieldName];
                 }
 
                 return response.data[info.fieldName];
