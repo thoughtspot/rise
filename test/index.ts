@@ -570,14 +570,12 @@ describe('Should handle gql type', () => {
       )
       .reply(200, (...args) => ({
         data: {
-          session:{
-            getGQLSessionDetailsWithWrap: {
-              id: '123',
-              name: 'John',
-              email: 'john@doe.com',
-              extra: 'extra',
-            },
-          }
+          getGQLSessionDetailsWithWrap: {
+            id: '123',
+            name: 'John',
+            email: 'john@doe.com',
+            extra: 'extra',
+          },
         }
       }));
 
