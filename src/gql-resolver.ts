@@ -36,7 +36,7 @@ export interface RiseDirectiveOptionsGql extends RiseDirectiveOptions {
  *  .then(res => res.session);
  *
  */
-function wrapArgumentsInGql(query, info, argwrapper) {
+function wrapArgumentsInGql(query = '', info, argwrapper) {
     if (argwrapper.name) {
         const { name: wrapperName, type: wrapperClass } = argwrapper;
         const operationType = info.operation.operation;
@@ -94,7 +94,7 @@ export function gqlResolver(
         });
         const reqHeaders = getReqHeaders(riseDirective, options, originalContext);
 
-        console.debug('[Rise] Downstream URL', urlToFetch, body);
+        console.debug('[Rise] GQL - Downstream URL and operation', urlToFetch, info.fieldName);
         return fetch(urlToFetch, {
             method: 'POST',
             headers: reqHeaders,
