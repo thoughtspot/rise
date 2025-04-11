@@ -10,6 +10,7 @@ const FORWARD_RESPONSE_HEADERS = [
     'x-nginx-localhost',
     'x-ua-compatible',
     'x-xss-protection',
+    'x-csrf-token',
 ];
 
 export const commonDefs = `
