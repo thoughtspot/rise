@@ -1,7 +1,9 @@
 import fetch from 'node-fetch';
 import { GraphQLFieldConfig } from 'graphql';
 import { print } from 'graphql/language/printer';
+import _ from 'lodash';
 import { RiseDirectiveOptions, getReqHeaders, processResHeaders } from './common';
+import { generateBodyFromTemplate } from './rest-resolver';
 
 export interface RiseDirectiveOptionsGql extends RiseDirectiveOptions {
     apiType: 'gql';
@@ -36,6 +38,7 @@ export interface RiseDirectiveOptionsGql extends RiseDirectiveOptions {
  *  .then(res => res.session);
  *
  */
+// eslint-disable-next-line default-param-last
 function wrapArgumentsInGql(query = '', info, argwrapper) {
     if (argwrapper.name) {
         const { name: wrapperName, type: wrapperClass } = argwrapper;
@@ -73,7 +76,7 @@ export function gqlResolver(
     fieldConfig: GraphQLFieldConfig<any, any, any>,
 ) {
     const url = options.baseURL;
-    let { argwrapper } = riseDirective;
+    let { argwrapper, gqlVariables } = riseDirective;
 
     fieldConfig.resolve = (source, args, context, info) => {
         let urlToFetch = url;
@@ -86,12 +89,13 @@ export function gqlResolver(
             query = wrapArgumentsInGql(query, info, argwrapper);
         }
 
+        const variables = gqlVariables ? generateBodyFromTemplate(gqlVariables, args) : info.variableValues;
         let body = JSON.stringify({
             query,
-            variables: wrappingObject
-                ? { [wrappingObject]: info.variableValues }
-                : info.variableValues,
+            variables: wrappingObject ? { [wrappingObject]: variables } : variables,
         });
+        console.debug('[Rise] GQL request body:', body);
+
         const reqHeaders = getReqHeaders(riseDirective, options, originalContext);
 
         console.debug('[Rise] GQL - Downstream URL and operation', urlToFetch, info.fieldName);
