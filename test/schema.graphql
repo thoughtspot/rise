@@ -76,6 +76,12 @@
 
     getGQLSessionDetails(sessionId: String, asd: String): User! @gqlrise
     getGQLSessionDetailsWithWrap(sessionId: String, asd: String): User! @gqlrise(argwrapper: {name: "session", type: "ACSession"})
+    getGQLSessionDetailsWithGqlVariables(sessionId: String, asd: String): User! @gqlrise(gqlVariables: """
+    {
+      "sessionId": "<%= args.sessionId %>",
+      "asd": "<%= args.asd %>"
+    }
+    """)
   }
   
   input ParamInput {
