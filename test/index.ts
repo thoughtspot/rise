@@ -664,6 +664,56 @@ describe('Should handle gql type', () => {
     });
   });
 
+  test('when gql query with responseKeyFormat is executed should return data as expected', () => {
+    nock(GQL_BASE_URL, {
+    })
+      .post('')
+      .reply(200, (...args) => ({
+        data: {
+          getGQLSessionDetailsWithResponseKeyFormat: {
+            id: '123',
+            name: 'John',
+            email: 'john@doe.com',
+            extra: 'extra',
+          },
+        },
+      }));
+
+    const contextValue = {
+      req: {
+        headers: {
+          Authorization: 'Bearer 123',
+          cookie: 'a=a',
+          foo: 'bar',
+        },
+      },
+    };
+
+    return graphql({
+      schema,
+      source: `
+        query getSession($sessionId: String, $asd: String) {
+          getGQLSessionDetailsWithResponseKeyFormat(sessionId: $sessionId, asd: $asd) {
+            name_test
+            email
+            id
+          }
+        }
+      `,
+      contextValue,
+      variableValues: {
+        sessionId: '1234',
+        asd: 'abc'
+      }
+    }).then((response: any) => {
+      expect(response?.data?.getGQLSessionDetailsWithResponseKeyFormat).toBeDefined();
+      expect(response?.data?.getGQLSessionDetailsWithResponseKeyFormat).toMatchObject({
+        name_test: 'John',
+        id: '123',
+      });
+    });
+  });
+
   test('when there is a error in gql query, the error should be responded back', () => {
     nock(GQL_BASE_URL, {
     })
