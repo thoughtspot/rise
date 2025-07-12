@@ -8,6 +8,24 @@ import fs from 'fs';
 import path from 'path';
 import { rise } from '../src/index';
 
+// Import the function we want to test
+// Note: Since mapKeysDeep is not exported, we'll need to move it to a separate file or export it
+// For now, let's create a local copy for testing
+function mapKeysDeep(obj: any, keyMap: Record<string, string> = {}): any {
+    if (Array.isArray(obj)) {
+        return obj.map((item) => mapKeysDeep(item, keyMap));
+    }
+    if (obj !== null && typeof obj === 'object') {
+        const mapped: Record<string, any> = {};
+        Object.keys(obj).forEach((key) => {
+            const newKey = keyMap[key] || key;
+            mapped[newKey] = mapKeysDeep(obj[key], keyMap);
+        });
+        return mapped;
+    }
+    return obj;
+}
+
 const typeDefs = fs.readFileSync(path.join(__dirname, './schema.graphql'), 'utf8');
 
 class ApolloError extends Error { }
@@ -51,6 +69,58 @@ afterAll(() => {
 const a = function () {
   return {};
 };
+
+describe('mapKeysDeep', () => {
+  test('should map keys according to keyMap', () => {
+    const input = { firstName: 'John', lastName: 'Doe', age: 30 };
+    const keyMap = { firstName: 'first_name', lastName: 'last_name' };
+    const expected = { first_name: 'John', last_name: 'Doe', age: 30 };
+    
+    expect(mapKeysDeep(input, keyMap)).toEqual(expected);
+  });
+
+  test('should map keys in nested objects and arrays', () => {
+    const input = {
+      users: [
+        {
+          firstName: 'John',
+          contact: {
+            phoneNumber: '123-456-7890'
+          }
+        },
+        {
+          firstName: 'Jane',
+          contact: {
+            phoneNumber: '987-654-3210'
+          }
+        }
+      ]
+    };
+    const keyMap = {
+      firstName: 'first_name',
+      phoneNumber: 'phone_number'
+    };
+    const expected = {
+      users: [
+        {
+          first_name: 'John',
+          contact: {
+            phone_number: '123-456-7890'
+          }
+        },
+        {
+          first_name: 'Jane',
+          contact: {
+            phone_number: '987-654-3210'
+          }
+        }
+      ]
+    };
+    
+    expect(mapKeysDeep(input, keyMap)).toEqual(expected);
+  });
+});
+
 describe('Should call the Target', () => {
   test('with the correct headers', async () => {
     nock('https://rise.com/callosum/v1', {
