@@ -2,7 +2,12 @@ import fetch from 'node-fetch';
 import { GraphQLFieldConfig } from 'graphql';
 import { print } from 'graphql/language/printer';
 import _ from 'lodash';
-import { RiseDirectiveOptions, getReqHeaders, processResHeaders } from './common';
+import {
+    RiseDirectiveOptions,
+    getReqHeaders,
+    mapKeysDeep,
+    processResHeaders,
+} from './common';
 import { generateBodyFromTemplate } from './rest-resolver';
 
 export interface RiseDirectiveOptionsGql extends RiseDirectiveOptions {
@@ -70,21 +75,6 @@ function wrapArgumentsInGql(query = '', info, argwrapper) {
     return query;
 }
 
-function mapKeysDeep(obj: any, keyMap: Record<string, string> = {}): any {
-    if (Array.isArray(obj)) {
-        return obj.map((item) => mapKeysDeep(item, keyMap));
-    }
-    if (obj !== null && typeof obj === 'object') {
-        const mapped: Record<string, any> = {};
-        Object.keys(obj).forEach((key) => {
-            const newKey = keyMap[key] || key;
-            mapped[newKey] = mapKeysDeep(obj[key], keyMap);
-        });
-        return mapped;
-    }
-    return obj;
-}
-
 export function gqlResolver(
     riseDirective,
     options: RiseDirectiveOptionsGql,
@@ -92,6 +82,16 @@ export function gqlResolver(
 ) {
     const url = options.baseURL;
     let { argwrapper, gqlVariables, responseKeyFormat } = riseDirective;
+
+    console.debug('[Rise] GQL - Response key format', responseKeyFormat);
+    let keyMap = {};
+    if (typeof responseKeyFormat === 'string') {
+        try {
+            keyMap = JSON.parse(responseKeyFormat);
+        } catch (error) {
+            console.error('[Rise] GQL - Failed to parse responseKeyFormat', error);
+        }
+    }
 
     fieldConfig.resolve = (source, args, context, info) => {
         let urlToFetch = url;
@@ -124,22 +124,9 @@ export function gqlResolver(
             headers: reqHeaders,
             body,
         })
-            .then(async (response) => {
+            .then((response) => {
                 processResHeaders(response, originalContext);
-                const data = await response.json();
-                if (responseKeyFormat) {
-                    console.debug('[Rise] GQL - Response key format', responseKeyFormat);
-                    let keyMap = {};
-                    if (typeof responseKeyFormat === 'string') {
-                        try {
-                            keyMap = JSON.parse(responseKeyFormat);
-                        } catch (error) {
-                            console.error('[Rise] GQL - Failed to parse responseKeyFormat', error);
-                        }
-                    }
-                    return mapKeysDeep(data, keyMap);
-                }
-                return data;
+                return response.json();
             })
             .then((response) => {
                 if (response.errors) {
@@ -150,8 +137,9 @@ export function gqlResolver(
                         response.errors,
                     );
                 }
-
-                return response.data[info.fieldName];
-            });
+                return response;
+            })
+            .then((data) => mapKeysDeep(data, keyMap))
+            .then((response) => response.data[info.fieldName]);
     };
 }
