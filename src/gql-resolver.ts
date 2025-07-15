@@ -6,6 +6,7 @@ import {
     RiseDirectiveOptions,
     getReqHeaders,
     mapKeysDeep,
+    parseResponseKeyFormat,
     processResHeaders,
 } from './common';
 import { generateBodyFromTemplate } from './rest-resolver';
@@ -84,14 +85,7 @@ export function gqlResolver(
     let { argwrapper, gqlVariables, responseKeyFormat } = riseDirective;
 
     console.debug('[Rise] GQL - Response key format', responseKeyFormat);
-    let keyMap = {};
-    if (typeof responseKeyFormat === 'string') {
-        try {
-            keyMap = JSON.parse(responseKeyFormat);
-        } catch (error) {
-            console.error('[Rise] GQL - Failed to parse responseKeyFormat', error);
-        }
-    }
+    const keyMap = parseResponseKeyFormat(responseKeyFormat);
 
     fieldConfig.resolve = (source, args, context, info) => {
         let urlToFetch = url;

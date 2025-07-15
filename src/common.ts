@@ -100,3 +100,33 @@ export function mapKeysDeep(obj: any, keyMap: Record<string, string> = {}): any 
     }
     return obj;
 }
+
+/**
+ * Parses responseKeyFormat from string to object format
+ * @param responseKeyFormat - The response key format, can be string (JSON) or object
+ * @returns Parsed key mapping object or empty object if parsing fails
+ */
+export function parseResponseKeyFormat(
+    responseKeyFormat: string | Record<string, string> | undefined,
+): Record<string, string> {
+    if (!responseKeyFormat) {
+        return {};
+    }
+    // If it's already an object, return it directly
+    if (typeof responseKeyFormat === 'object') {
+        return responseKeyFormat;
+    }
+    // If it's a string, try to parse it as JSON
+    if (typeof responseKeyFormat === 'string') {
+        try {
+            const parsed = JSON.parse(responseKeyFormat);
+            console.debug('[Rise] Parsed responseKeyFormat:', parsed);
+            return parsed;
+        } catch (error) {
+            console.error('[Rise] Failed to parse responseKeyFormat as JSON:', error);
+            console.error('[Rise] Invalid responseKeyFormat:', responseKeyFormat);
+            return {};
+        }
+    }
+    return {};
+}

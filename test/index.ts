@@ -7,7 +7,7 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import fs from 'fs';
 import path from 'path';
 import { rise } from '../src/index';
-import { mapKeysDeep } from '../src/common';
+import { mapKeysDeep, parseResponseKeyFormat } from '../src/common';
 
 const typeDefs = fs.readFileSync(path.join(__dirname, './schema.graphql'), 'utf8');
 
@@ -107,6 +107,44 @@ describe('mapKeysDeep', () => {
     };
     
     expect(mapKeysDeep(input, keyMap)).toEqual(expected);
+  });
+});
+
+describe('parseResponseKeyFormat', () => {
+  test('empty cases', () => {
+    const result = parseResponseKeyFormat('');
+    expect(result).toEqual({});
+
+    const result2 = parseResponseKeyFormat(null as any);
+    expect(result2).toEqual({});
+
+    const result3 = parseResponseKeyFormat(undefined);
+    expect(result3).toEqual({});
+  });
+
+  test('should parse complex nested JSON string correctly', () => {
+    const jsonString = '{"user": {"firstName": "first_name"}, "contact": {"phoneNumber": "phone_number"}}';
+    const expected = {
+      user: { firstName: 'first_name' },
+      contact: { phoneNumber: 'phone_number' }
+    };
+    const result = parseResponseKeyFormat(jsonString);
+    expect(result).toEqual(expected);
+
+    const jsonString2 = '{"user-name": "user_name", "email@domain": "email_domain"}';
+    const expected2 = { 'user-name': 'user_name', 'email@domain': 'email_domain' };
+    const result2 = parseResponseKeyFormat(jsonString2);
+    expect(result2).toEqual(expected2);
+  });
+
+  test('should return empty object for malformed JSON string', () => {
+    const malformedJson = 'not a json string';
+    const result = parseResponseKeyFormat(malformedJson);
+    expect(result).toEqual({});
+
+    const syntaxErrorJson = '{"firstName" "first_name"}'; // Missing colon
+    const result2 = parseResponseKeyFormat(syntaxErrorJson);
+    expect(result2).toEqual({});
   });
 });
 
