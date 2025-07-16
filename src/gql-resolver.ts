@@ -8,6 +8,8 @@ import {
     mapKeysDeep,
     parseResponseKeyFormat,
     processResHeaders,
+    renameFieldsInQuery,
+    reverseKeyValue,
 } from './common';
 import { generateBodyFromTemplate } from './rest-resolver';
 
@@ -86,6 +88,7 @@ export function gqlResolver(
 
     console.debug('[Rise] GQL - Response key format', responseKeyFormat);
     const keyMap = parseResponseKeyFormat(responseKeyFormat);
+    const reverseKeyMap = reverseKeyValue(keyMap);
 
     fieldConfig.resolve = (source, args, context, info) => {
         let urlToFetch = url;
@@ -101,8 +104,11 @@ export function gqlResolver(
         const variables = gqlVariables
             ? generateBodyFromTemplate(gqlVariables, args)
             : info.variableValues;
-
         console.debug('[Rise] GQL - Variables', variables);
+        if (Object.keys(reverseKeyMap).length > 0) {
+            query = renameFieldsInQuery(query, reverseKeyMap);
+        }
+        console.debug('[Rise] GQL - Query', query);
 
         let body = JSON.stringify({
             query,

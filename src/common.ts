@@ -1,3 +1,9 @@
+import {
+    FieldNode,
+    parse,
+    visit,
+    print,
+} from 'graphql';
 import _ from 'lodash';
 
 const FORWARD_RESPONSE_HEADERS = [
@@ -129,4 +135,33 @@ export function parseResponseKeyFormat(
         }
     }
     return {};
+}
+
+export function reverseKeyValue(obj: Record<string, string | number>): Record<string, string> {
+    const reversed: Record<string, string> = {};
+    Object.keys(obj).forEach((key) => {
+        reversed[String(obj[key])] = key;
+    });
+    return reversed;
+}
+
+export function renameFieldsInQuery(query: string, renameMap: { [key: string]: string }): string {
+    const ast = parse(query);
+    const updatedAst = visit(ast, {
+        Field(node: FieldNode): FieldNode | undefined {
+        const newName = renameMap[node.name.value];
+        if (newName) {
+            return {
+                ...node,
+                name: {
+                ...node.name,
+                value: newName,
+            },
+            };
+        }
+        return undefined;
+        },
+    });
+    console.debug('[Rise] Renamed fields in query:', updatedAst);
+    return print(updatedAst);
 }

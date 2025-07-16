@@ -7,7 +7,7 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import fs from 'fs';
 import path from 'path';
 import { rise } from '../src/index';
-import { mapKeysDeep, parseResponseKeyFormat } from '../src/common';
+import { mapKeysDeep, parseResponseKeyFormat, reverseKeyValue, renameFieldsInQuery } from '../src/common';
 
 const typeDefs = fs.readFileSync(path.join(__dirname, './schema.graphql'), 'utf8');
 
@@ -1024,5 +1024,110 @@ describe('Parse data according to the content type', () => {
         message: 'Text body passed by user',
       }));
     });
+  });
+});
+
+describe('reverseKeyValue', () => {
+  test('should reverse key-value pairs with string values', () => {
+    const input = { name: 'John', city: 'NYC', country: 'USA' };
+    const expected = { John: 'name', NYC: 'city', USA: 'country' };
+    const result = reverseKeyValue(input);
+    expect(result).toEqual(expected);
+  });
+
+  test('should reverse key-value pairs with number values and convert them to strings', () => {
+    const input = { age: 25, score: 100, year: 2023 };
+    const expected = { '25': 'age', '100': 'score', '2023': 'year' };
+    const result = reverseKeyValue(input);
+    expect(result).toEqual(expected);
+  });
+
+  test('should handle empty object', () => {
+    const input = {};
+    const expected = {};
+    const result = reverseKeyValue(input);
+    expect(result).toEqual(expected);
+  });
+});
+
+describe('renameFieldsInQuery', () => {
+  test('should comprehensively rename fields in GraphQL query covering all scenarios', () => {
+    // Complex query with multiple fields, nested structure, arguments, and aliases
+    const query = `
+      query GetUserData($id: ID!) {
+        user(id: $id) {
+          userName
+          userEmail
+          profile {
+            firstName
+            lastName
+            address {
+              street
+              city
+            }
+          }
+          posts(limit: 10) {
+            postTitle
+            postContent
+            author {
+              userName
+            }
+          }
+          unchangedField
+        }
+        settings {
+          theme
+          notifications
+        }
+      }
+    `;
+
+    // Rename map covering various scenarios
+    const renameMap = {
+      userName: 'name',           // Basic field rename
+      userEmail: 'email',         // Another basic field rename
+      firstName: 'first_name',    // Nested field rename
+      lastName: 'last_name',      // Another nested field rename
+      postTitle: 'title',         // Field in array/list
+      postContent: 'content',     // Another field in array/list
+      // Note: unchangedField, street, city, theme, notifications are not in map - should remain unchanged
+    };
+
+    const result = renameFieldsInQuery(query, renameMap);
+
+    // Verify all specified fields are renamed
+    expect(result).toContain('name');           // userName -> name
+    expect(result).toContain('email');          // userEmail -> email
+    expect(result).toContain('first_name');     // firstName -> first_name
+    expect(result).toContain('last_name');      // lastName -> last_name
+    expect(result).toContain('title');          // postTitle -> title
+    expect(result).toContain('content');        // postContent -> content
+
+    // Verify fields not in rename map remain unchanged
+    expect(result).toContain('unchangedField');
+    expect(result).toContain('street');
+    expect(result).toContain('city');
+    expect(result).toContain('theme');
+    expect(result).toContain('notifications');
+
+    // Verify old field names are no longer present
+    expect(result).not.toContain('userName');
+    expect(result).not.toContain('userEmail');
+    expect(result).not.toContain('firstName');
+    expect(result).not.toContain('lastName');
+    expect(result).not.toContain('postTitle');
+    expect(result).not.toContain('postContent');
+
+    // Verify the query structure remains valid (contains key GraphQL elements)
+    expect(result).toContain('query GetUserData');
+    expect(result).toContain('$id: ID!');
+    expect(result).toContain('user(id: $id)');
+    expect(result).toContain('posts(limit: 10)');
+
+    // Test edge case: empty rename map should return original query
+    const resultWithEmptyMap = renameFieldsInQuery(query, {});
+    expect(resultWithEmptyMap).toContain('userName');
+    expect(resultWithEmptyMap).toContain('userEmail');
+    expect(resultWithEmptyMap).toContain('firstName');
   });
 });
