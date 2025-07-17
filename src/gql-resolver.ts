@@ -2,7 +2,15 @@ import fetch from 'node-fetch';
 import { GraphQLFieldConfig } from 'graphql';
 import { print } from 'graphql/language/printer';
 import _ from 'lodash';
-import { RiseDirectiveOptions, getReqHeaders, processResHeaders } from './common';
+import {
+    RiseDirectiveOptions,
+    getReqHeaders,
+    mapKeysDeep,
+    parseResponseKeyFormat,
+    processResHeaders,
+    renameFieldsInQuery,
+    reverseKeyValue,
+} from './common';
 import { generateBodyFromTemplate } from './rest-resolver';
 
 export interface RiseDirectiveOptionsGql extends RiseDirectiveOptions {
@@ -76,7 +84,11 @@ export function gqlResolver(
     fieldConfig: GraphQLFieldConfig<any, any, any>,
 ) {
     const url = options.baseURL;
-    let { argwrapper, gqlVariables } = riseDirective;
+    let { argwrapper, gqlVariables, responseKeyFormat } = riseDirective;
+
+    console.debug('[Rise] GQL - Response key format', responseKeyFormat);
+    const keyMap = parseResponseKeyFormat(responseKeyFormat);
+    const reverseKeyMap = reverseKeyValue(keyMap);
 
     fieldConfig.resolve = (source, args, context, info) => {
         let urlToFetch = url;
@@ -89,7 +101,15 @@ export function gqlResolver(
             query = wrapArgumentsInGql(query, info, argwrapper);
         }
 
-        const variables = gqlVariables ? generateBodyFromTemplate(gqlVariables, args) : info.variableValues;
+        const variables = gqlVariables
+            ? generateBodyFromTemplate(gqlVariables, args)
+            : info.variableValues;
+        console.debug('[Rise] GQL - Variables', variables);
+        if (Object.keys(reverseKeyMap).length > 0) {
+            query = renameFieldsInQuery(query, reverseKeyMap);
+        }
+        console.debug('[Rise] GQL - Query', query);
+
         let body = JSON.stringify({
             query,
             variables: wrappingObject ? { [wrappingObject]: variables } : variables,
@@ -117,8 +137,9 @@ export function gqlResolver(
                         response.errors,
                     );
                 }
-
-                return response.data[info.fieldName];
-            });
+                return response;
+            })
+            .then((data) => mapKeysDeep(data, keyMap))
+            .then((response) => response.data[info.fieldName]);
     };
 }

@@ -7,6 +7,7 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import fs from 'fs';
 import path from 'path';
 import { rise } from '../src/index';
+import { mapKeysDeep, parseResponseKeyFormat, reverseKeyValue, renameFieldsInQuery } from '../src/common';
 
 const typeDefs = fs.readFileSync(path.join(__dirname, './schema.graphql'), 'utf8');
 
@@ -51,6 +52,102 @@ afterAll(() => {
 const a = function () {
   return {};
 };
+
+describe('mapKeysDeep', () => {
+  test('should return the original object if keyMap is empty', () => {
+    const input = { firstName: 'John', lastName: 'Doe', age: 30 };
+    const keyMap = {};
+    const expected = { firstName: 'John', lastName: 'Doe', age: 30 };
+    expect(mapKeysDeep(input, keyMap)).toEqual(expected);
+  });
+
+  test('should map keys according to keyMap', () => {
+    const input = { firstName: 'John', lastName: 'Doe', age: 30 };
+    const keyMap = { firstName: 'first_name', lastName: 'last_name' };
+    const expected = { first_name: 'John', last_name: 'Doe', age: 30 };
+    expect(mapKeysDeep(input, keyMap)).toEqual(expected);
+  });
+
+  test('should map keys in nested objects and arrays', () => {
+    const input = {
+      users: [
+        {
+          firstName: 'John',
+          contact: {
+            phoneNumber: '123-456-7890'
+          }
+        },
+        {
+          firstName: 'Jane',
+          contact: {
+            phoneNumber: '987-654-3210'
+          }
+        }
+      ]
+    };
+    const keyMap = {
+      firstName: 'first_name',
+      phoneNumber: 'phone_number'
+    };
+    const expected = {
+      users: [
+        {
+          first_name: 'John',
+          contact: {
+            phone_number: '123-456-7890'
+          }
+        },
+        {
+          first_name: 'Jane',
+          contact: {
+            phone_number: '987-654-3210'
+          }
+        }
+      ]
+    };
+    
+    expect(mapKeysDeep(input, keyMap)).toEqual(expected);
+  });
+});
+
+describe('parseResponseKeyFormat', () => {
+  test('empty cases', () => {
+    const result = parseResponseKeyFormat('');
+    expect(result).toEqual({});
+
+    const result2 = parseResponseKeyFormat(null as any);
+    expect(result2).toEqual({});
+
+    const result3 = parseResponseKeyFormat(undefined);
+    expect(result3).toEqual({});
+  });
+
+  test('should parse complex nested JSON string correctly', () => {
+    const jsonString = '{"user": {"firstName": "first_name"}, "contact": {"phoneNumber": "phone_number"}}';
+    const expected = {
+      user: { firstName: 'first_name' },
+      contact: { phoneNumber: 'phone_number' }
+    };
+    const result = parseResponseKeyFormat(jsonString);
+    expect(result).toEqual(expected);
+
+    const jsonString2 = '{"user-name": "user_name", "email@domain": "email_domain"}';
+    const expected2 = { 'user-name': 'user_name', 'email@domain': 'email_domain' };
+    const result2 = parseResponseKeyFormat(jsonString2);
+    expect(result2).toEqual(expected2);
+  });
+
+  test('should return empty object for malformed JSON string', () => {
+    const malformedJson = 'not a json string';
+    const result = parseResponseKeyFormat(malformedJson);
+    expect(result).toEqual({});
+
+    const syntaxErrorJson = '{"firstName" "first_name"}'; // Missing colon
+    const result2 = parseResponseKeyFormat(syntaxErrorJson);
+    expect(result2).toEqual({});
+  });
+});
+
 describe('Should call the Target', () => {
   test('with the correct headers', async () => {
     nock('https://rise.com/callosum/v1', {
@@ -664,6 +761,56 @@ describe('Should handle gql type', () => {
     });
   });
 
+  test('when gql query with responseKeyFormat is executed should return data as expected', () => {
+    nock(GQL_BASE_URL, {
+    })
+      .post('')
+      .reply(200, (...args) => ({
+        data: {
+          getGQLSessionDetailsWithResponseKeyFormat: {
+            id: '123',
+            name: 'John',
+            email: 'john@doe.com',
+            extra: 'extra',
+          },
+        },
+      }));
+
+    const contextValue = {
+      req: {
+        headers: {
+          Authorization: 'Bearer 123',
+          cookie: 'a=a',
+          foo: 'bar',
+        },
+      },
+    };
+
+    return graphql({
+      schema,
+      source: `
+        query getSession($sessionId: String, $asd: String) {
+          getGQLSessionDetailsWithResponseKeyFormat(sessionId: $sessionId, asd: $asd) {
+            name_test
+            email
+            id
+          }
+        }
+      `,
+      contextValue,
+      variableValues: {
+        sessionId: '1234',
+        asd: 'abc'
+      }
+    }).then((response: any) => {
+      expect(response?.data?.getGQLSessionDetailsWithResponseKeyFormat).toBeDefined();
+      expect(response?.data?.getGQLSessionDetailsWithResponseKeyFormat).toMatchObject({
+        name_test: 'John',
+        id: '123',
+      });
+    });
+  });
+
   test('when there is a error in gql query, the error should be responded back', () => {
     nock(GQL_BASE_URL, {
     })
@@ -877,5 +1024,110 @@ describe('Parse data according to the content type', () => {
         message: 'Text body passed by user',
       }));
     });
+  });
+});
+
+describe('reverseKeyValue', () => {
+  test('should reverse key-value pairs with string values', () => {
+    const input = { name: 'John', city: 'NYC', country: 'USA' };
+    const expected = { John: 'name', NYC: 'city', USA: 'country' };
+    const result = reverseKeyValue(input);
+    expect(result).toEqual(expected);
+  });
+
+  test('should reverse key-value pairs with number values and convert them to strings', () => {
+    const input = { age: 25, score: 100, year: 2023 };
+    const expected = { '25': 'age', '100': 'score', '2023': 'year' };
+    const result = reverseKeyValue(input);
+    expect(result).toEqual(expected);
+  });
+
+  test('should handle empty object', () => {
+    const input = {};
+    const expected = {};
+    const result = reverseKeyValue(input);
+    expect(result).toEqual(expected);
+  });
+});
+
+describe('renameFieldsInQuery', () => {
+  test('should comprehensively rename fields in GraphQL query covering all scenarios', () => {
+    // Complex query with multiple fields, nested structure, arguments, and aliases
+    const query = `
+      query GetUserData($id: ID!) {
+        user(id: $id) {
+          userName
+          userEmail
+          profile {
+            firstName
+            lastName
+            address {
+              street
+              city
+            }
+          }
+          posts(limit: 10) {
+            postTitle
+            postContent
+            author {
+              userName
+            }
+          }
+          unchangedField
+        }
+        settings {
+          theme
+          notifications
+        }
+      }
+    `;
+
+    // Rename map covering various scenarios
+    const renameMap = {
+      userName: 'name',           // Basic field rename
+      userEmail: 'email',         // Another basic field rename
+      firstName: 'first_name',    // Nested field rename
+      lastName: 'last_name',      // Another nested field rename
+      postTitle: 'title',         // Field in array/list
+      postContent: 'content',     // Another field in array/list
+      // Note: unchangedField, street, city, theme, notifications are not in map - should remain unchanged
+    };
+
+    const result = renameFieldsInQuery(query, renameMap);
+
+    // Verify all specified fields are renamed
+    expect(result).toContain('name');           // userName -> name
+    expect(result).toContain('email');          // userEmail -> email
+    expect(result).toContain('first_name');     // firstName -> first_name
+    expect(result).toContain('last_name');      // lastName -> last_name
+    expect(result).toContain('title');          // postTitle -> title
+    expect(result).toContain('content');        // postContent -> content
+
+    // Verify fields not in rename map remain unchanged
+    expect(result).toContain('unchangedField');
+    expect(result).toContain('street');
+    expect(result).toContain('city');
+    expect(result).toContain('theme');
+    expect(result).toContain('notifications');
+
+    // Verify old field names are no longer present
+    expect(result).not.toContain('userName');
+    expect(result).not.toContain('userEmail');
+    expect(result).not.toContain('firstName');
+    expect(result).not.toContain('lastName');
+    expect(result).not.toContain('postTitle');
+    expect(result).not.toContain('postContent');
+
+    // Verify the query structure remains valid (contains key GraphQL elements)
+    expect(result).toContain('query GetUserData');
+    expect(result).toContain('$id: ID!');
+    expect(result).toContain('user(id: $id)');
+    expect(result).toContain('posts(limit: 10)');
+
+    // Test edge case: empty rename map should return original query
+    const resultWithEmptyMap = renameFieldsInQuery(query, {});
+    expect(resultWithEmptyMap).toContain('userName');
+    expect(resultWithEmptyMap).toContain('userEmail');
+    expect(resultWithEmptyMap).toContain('firstName');
   });
 });
