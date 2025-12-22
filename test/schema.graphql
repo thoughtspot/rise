@@ -29,6 +29,24 @@
     )
   }
 
+  type UserResponseKeyFormat {
+    name_test: String,
+    email: String!
+    id: String
+    account_type: String,
+    currrent_org: Org,
+    privileges: [String],
+    tenant_id: String,
+    user_groups: [UserGroup],
+    display_name: String,
+    key: String
+    history(from: String): [String]
+    @service(
+      path: "/v2/users/$identifier/history?from=$from",
+      method: "GET"
+    )
+  }
+
   type TokenResponse {
     token: String!,
     valid_for_userid: String!,
@@ -76,6 +94,17 @@
 
     getGQLSessionDetails(sessionId: String, asd: String): User! @gqlrise
     getGQLSessionDetailsWithWrap(sessionId: String, asd: String): User! @gqlrise(argwrapper: {name: "session", type: "ACSession"})
+    getGQLSessionDetailsWithGqlVariables(sessionId: String, asd: String): User! @gqlrise(gqlVariables: """
+    {
+      "sessionId": "<%= args.sessionId %>",
+      "asd": "<%= args.asd %>"
+    }
+    """)
+    getGQLSessionDetailsWithResponseKeyFormat (sessionId: String, asd: String): UserResponseKeyFormat! @gqlrise(responseKeyFormat: """
+    {
+      "name": "name_test"
+    }
+    """)
   }
   
   input ParamInput {

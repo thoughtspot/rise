@@ -5,7 +5,7 @@ import nodePath from 'path';
 import _ from 'lodash';
 import { RiseDirectiveOptions, getReqHeaders, processResHeaders } from './common';
 
-function generateBodyFromTemplate(template, args) {
+export function generateBodyFromTemplate(template, args) {
   const body = _.template(template)({ args });
   return JSON.parse(body);
 }

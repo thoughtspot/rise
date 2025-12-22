@@ -1,3 +1,9 @@
+import {
+    FieldNode,
+    parse,
+    visit,
+    print,
+} from 'graphql';
 import _ from 'lodash';
 
 const FORWARD_RESPONSE_HEADERS = [
@@ -36,19 +42,19 @@ export function getReqHeaders(riseDirective: RiseDirectiveOptions, options, cont
         headers = {},
         contenttype = options.contenttype || 'application/json',
         forwardheaders = [],
-      } = riseDirective;
+    } = riseDirective;
 
-      headers = {
+    headers = {
         'Content-Type': contenttype,
         ...options.headers,
         ...headers,
-      };
-      forwardheaders.push(...options.forwardheaders);
-      forwardheaders = forwardheaders.map((h) => h.toLowerCase());
-      return {
+    };
+    forwardheaders.push(...options.forwardheaders);
+    forwardheaders = forwardheaders.map((h) => h.toLowerCase());
+    return {
         ...headers,
         ..._.pickBy(context.req.headers, (v, h) => forwardheaders.includes(h.toLowerCase())),
-      };
+    };
 }
 
 export function processResHeaders(response, context) {
@@ -71,4 +77,92 @@ export class RestError extends Error {
         this.code = code;
         this.errors = errors;
     }
+}
+
+// The function is used to map the keys of the object to the new keys
+// By default, it will return the original object if the key is not in the keyMap
+// Example:
+// const obj = { a: 1, b: 2, c: 3 }
+// const keyMap = { a: 'd', b: 'e', f: 'g' }
+// const newObj = mapKeysDeep(obj, keyMap)
+// newObj will be { d: 1, e: 2, c: 3 }
+// The function will not modify the original object
+export function mapKeysDeep(obj: any, keyMap: Record<string, string> = {}): any {
+    // If keyMap is empty, return original object
+    if (!keyMap || Object.keys(keyMap).length === 0) {
+        return obj;
+    }
+    // If obj is an array, map each item in the array
+    if (Array.isArray(obj)) {
+        return obj.map((item) => mapKeysDeep(item, keyMap));
+    }
+    // If obj is an object, map each key in the object
+    if (obj !== null && typeof obj === 'object') {
+        const mapped: Record<string, any> = {};
+        Object.keys(obj).forEach((key) => {
+            const newKey = keyMap[key] || key;
+            mapped[newKey] = mapKeysDeep(obj[key], keyMap);
+        });
+        return mapped;
+    }
+    return obj;
+}
+
+/**
+ * Parses responseKeyFormat from string to object format
+ * @param responseKeyFormat - The response key format, can be string (JSON) or object
+ * @returns Parsed key mapping object or empty object if parsing fails
+ */
+export function parseResponseKeyFormat(
+    responseKeyFormat: string | Record<string, string> | undefined,
+): Record<string, string> {
+    if (!responseKeyFormat) {
+        return {};
+    }
+    // If it's already an object, return it directly
+    if (typeof responseKeyFormat === 'object') {
+        return responseKeyFormat;
+    }
+    // If it's a string, try to parse it as JSON
+    if (typeof responseKeyFormat === 'string') {
+        try {
+            const parsed = JSON.parse(responseKeyFormat);
+            console.debug('[Rise] Parsed responseKeyFormat:', parsed);
+            return parsed;
+        } catch (error) {
+            console.error('[Rise] Failed to parse responseKeyFormat as JSON:', error);
+            console.error('[Rise] Invalid responseKeyFormat:', responseKeyFormat);
+            return {};
+        }
+    }
+    return {};
+}
+
+export function reverseKeyValue(obj: Record<string, string | number>): Record<string, string> {
+    const reversed: Record<string, string> = {};
+    Object.keys(obj).forEach((key) => {
+        reversed[String(obj[key])] = key;
+    });
+    return reversed;
+}
+
+export function renameFieldsInQuery(query: string, renameMap: { [key: string]: string }): string {
+    const ast = parse(query);
+    const updatedAst = visit(ast, {
+        Field(node: FieldNode): FieldNode | undefined {
+        const newName = renameMap[node.name.value];
+        if (newName) {
+            return {
+                ...node,
+                name: {
+                ...node.name,
+                value: newName,
+            },
+            };
+        }
+        return undefined;
+        },
+    });
+    console.debug('[Rise] Renamed fields in query:', updatedAst);
+    return print(updatedAst);
 }

@@ -1,7 +1,17 @@
 import fetch from 'node-fetch';
 import { GraphQLFieldConfig } from 'graphql';
 import { print } from 'graphql/language/printer';
-import { RiseDirectiveOptions, getReqHeaders, processResHeaders } from './common';
+import _ from 'lodash';
+import {
+    RiseDirectiveOptions,
+    getReqHeaders,
+    mapKeysDeep,
+    parseResponseKeyFormat,
+    processResHeaders,
+    renameFieldsInQuery,
+    reverseKeyValue,
+} from './common';
+import { generateBodyFromTemplate } from './rest-resolver';
 
 export interface RiseDirectiveOptionsGql extends RiseDirectiveOptions {
     apiType: 'gql';
@@ -36,6 +46,7 @@ export interface RiseDirectiveOptionsGql extends RiseDirectiveOptions {
  *  .then(res => res.session);
  *
  */
+// eslint-disable-next-line default-param-last
 function wrapArgumentsInGql(query = '', info, argwrapper) {
     if (argwrapper.name) {
         const { name: wrapperName, type: wrapperClass } = argwrapper;
@@ -73,7 +84,11 @@ export function gqlResolver(
     fieldConfig: GraphQLFieldConfig<any, any, any>,
 ) {
     const url = options.baseURL;
-    let { argwrapper } = riseDirective;
+    let { argwrapper, gqlVariables, responseKeyFormat } = riseDirective;
+
+    console.debug('[Rise] GQL - Response key format', responseKeyFormat);
+    const keyMap = parseResponseKeyFormat(responseKeyFormat);
+    const reverseKeyMap = reverseKeyValue(keyMap);
 
     fieldConfig.resolve = (source, args, context, info) => {
         let urlToFetch = url;
@@ -86,12 +101,21 @@ export function gqlResolver(
             query = wrapArgumentsInGql(query, info, argwrapper);
         }
 
+        const variables = gqlVariables
+            ? generateBodyFromTemplate(gqlVariables, args)
+            : info.variableValues;
+        console.debug('[Rise] GQL - Variables', variables);
+        if (Object.keys(reverseKeyMap).length > 0) {
+            query = renameFieldsInQuery(query, reverseKeyMap);
+        }
+        console.debug('[Rise] GQL - Query', query);
+
         let body = JSON.stringify({
             query,
-            variables: wrappingObject
-                ? { [wrappingObject]: info.variableValues }
-                : info.variableValues,
+            variables: wrappingObject ? { [wrappingObject]: variables } : variables,
         });
+        console.debug('[Rise] GQL request body:', body);
+
         const reqHeaders = getReqHeaders(riseDirective, options, originalContext);
 
         console.debug('[Rise] GQL - Downstream URL and operation', urlToFetch, info.fieldName);
@@ -113,8 +137,9 @@ export function gqlResolver(
                         response.errors,
                     );
                 }
-
-                return response.data[info.fieldName];
-            });
+                return response;
+            })
+            .then((data) => mapKeysDeep(data, keyMap))
+            .then((response) => response.data[info.fieldName]);
     };
 }
