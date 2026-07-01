@@ -10,6 +10,7 @@ import {
     processResHeaders,
     renameFieldsInQuery,
     reverseKeyValue,
+    parseJsonOrThrow,
 } from './common';
 import { generateBodyFromTemplate } from './rest-resolver';
 
@@ -126,7 +127,7 @@ export function gqlResolver(
         })
             .then((response) => {
                 processResHeaders(response, originalContext);
-                return response.json();
+                return parseJsonOrThrow(response, options.ErrorClass);
             })
             .then((response) => {
                 if (response.errors) {

@@ -864,6 +864,72 @@ describe('Should handle gql type', () => {
       // TODO: fix error response handling add updated test here.
     });
   });
+
+  test('non-2xx with an empty body preserves the upstream status (not 500)', () => {
+    // Regression: Eureka Agent returns 403 with an empty body. The old code
+    // called response.json() unconditionally, which threw a status-less
+    // SyntaxError and surfaced as 500. parseJsonOrThrow must keep the 403.
+    nock(GQL_BASE_URL, {})
+      .post('')
+      .reply(403);
+
+    const contextValue = {
+      req: { headers: { Authorization: 'Bearer 123', cookie: 'a=a' } },
+    };
+
+    return graphql({
+      schema,
+      source: `
+         query getSession($sessionId: String, $asd: String) {
+          getGQLSessionDetails(sessionId: $sessionId, asd: $asd) {
+            name
+            email
+            id
+          }
+        }
+      `,
+      contextValue,
+    }).then((response: any) => {
+      expect(response?.data?.getGQLSessionDetails).toBeUndefined();
+      expect(response.errors).toBeDefined();
+      // RestError stores the HTTP status in `.code`; it must be 403, not 500.
+      expect(response.errors[0].originalError.code).toBe(403);
+    });
+  });
+
+  test('non-2xx with a JSON error body preserves the status and passes errors through', () => {
+    nock(GQL_BASE_URL, {})
+      .post('')
+      .reply(403, {
+        errors: [{ message: 'Forbidden', extensions: { code: 'FORBIDDEN' } }],
+      });
+
+    const contextValue = {
+      req: { headers: { Authorization: 'Bearer 123', cookie: 'a=a' } },
+    };
+
+    return graphql({
+      schema,
+      source: `
+         query getSession($sessionId: String, $asd: String) {
+          getGQLSessionDetails(sessionId: $sessionId, asd: $asd) {
+            name
+            email
+            id
+          }
+        }
+      `,
+      contextValue,
+    }).then((response: any) => {
+      expect(response.errors).toBeDefined();
+      const original = response.errors[0].originalError;
+      expect(original.code).toBe(403);
+      // The upstream `errors` array is forwarded as the error context.
+      expect(original.errors).toEqual([
+        { message: 'Forbidden', extensions: { code: 'FORBIDDEN' } },
+      ]);
+    });
+  });
 });
 
 class TestError extends Error {

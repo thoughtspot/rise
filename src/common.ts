@@ -166,3 +166,21 @@ export function renameFieldsInQuery(query: string, renameMap: { [key: string]: s
     console.debug('[Rise] Renamed fields in query:', updatedAst);
     return print(updatedAst);
 }
+
+export async function parseJsonOrThrow(response, ErrorClass) {
+    if (response.ok) {
+        return response.json();
+    }
+    // Error path: preserve HTTP status even when the body is empty / non-JSON.
+    let payload;
+    try {
+        payload = await response.json();
+    } catch (err) {
+        throw new ErrorClass(response.statusText, response.status, err);
+    }
+    throw new ErrorClass(
+        response.statusText,
+        response.status,
+        payload.errors || payload,
+    );
+}
