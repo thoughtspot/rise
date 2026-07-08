@@ -7,7 +7,7 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import fs from 'fs';
 import path from 'path';
 import { rise } from '../src/index';
-import { mapKeysDeep, parseResponseKeyFormat, reverseKeyValue, renameFieldsInQuery } from '../src/common';
+import { mapKeysDeep, parseResponseKeyFormat, reverseKeyValue, renameFieldsInQuery, parseJsonOrThrow } from '../src/common';
 
 const typeDefs = fs.readFileSync(path.join(__dirname, './schema.graphql'), 'utf8');
 
@@ -145,6 +145,99 @@ describe('parseResponseKeyFormat', () => {
     const syntaxErrorJson = '{"firstName" "first_name"}'; // Missing colon
     const result2 = parseResponseKeyFormat(syntaxErrorJson);
     expect(result2).toEqual({});
+  });
+});
+
+describe('parseJsonOrThrow', () => {
+  // Captures the args the resolver passes to options.ErrorClass, so we can
+  // assert the HTTP status/statusText are preserved on the error path.
+  class CapturingError extends Error {
+    statusText: string;
+
+    status: number;
+
+    payload: any;
+
+    constructor(statusText: string, status: number, payload: any) {
+      super(statusText);
+      this.statusText = statusText;
+      this.status = status;
+      this.payload = payload;
+    }
+  }
+
+  const makeResponse = (overrides: any) => ({
+    ok: false,
+    status: 500,
+    statusText: 'Internal Server Error',
+    json: () => Promise.resolve({}),
+    ...overrides,
+  });
+
+  test('returns the parsed JSON body on a 2xx response', async () => {
+    const body = { data: { foo: 'bar' } };
+    const response = makeResponse({
+      ok: true,
+      json: () => Promise.resolve(body),
+    });
+
+    await expect(parseJsonOrThrow(response, CapturingError)).resolves.toEqual(
+      body,
+    );
+  });
+
+  test('throws with the upstream status and errors array on a non-2xx JSON body', async () => {
+    const errors = [{ message: 'Forbidden', extensions: { code: 'FORBIDDEN' } }];
+    const response = makeResponse({
+      status: 403,
+      statusText: 'Forbidden',
+      json: () => Promise.resolve({ errors }),
+    });
+
+    await expect(
+      parseJsonOrThrow(response, CapturingError),
+    ).rejects.toMatchObject({
+      status: 403,
+      statusText: 'Forbidden',
+      payload: errors,
+    });
+  });
+
+  test('throws with the full payload when the error body has no errors field', async () => {
+    const body = { message: 'something went wrong' };
+    const response = makeResponse({
+      status: 400,
+      statusText: 'Bad Request',
+      json: () => Promise.resolve(body),
+    });
+
+    await expect(
+      parseJsonOrThrow(response, CapturingError),
+    ).rejects.toMatchObject({
+      status: 400,
+      statusText: 'Bad Request',
+      payload: body,
+    });
+  });
+
+  test('preserves the status when the body is empty / not valid JSON', async () => {
+    // Reproduces the Eureka Agent 403-with-empty-body case: response.json()
+    // throws a SyntaxError, but the HTTP status must still be preserved
+    // (instead of surfacing as a status-less 500).
+    const parseError = new SyntaxError('Unexpected end of JSON input');
+    const response = makeResponse({
+      status: 403,
+      statusText: 'Forbidden',
+      json: () => Promise.reject(parseError),
+    });
+
+    await expect(
+      parseJsonOrThrow(response, CapturingError),
+    ).rejects.toMatchObject({
+      status: 403,
+      statusText: 'Forbidden',
+      payload: parseError,
+    });
   });
 });
 
@@ -862,6 +955,50 @@ describe('Should handle gql type', () => {
       expect(response?.data?.getGQLSessionDetails).toBeUndefined();
       expect(response.errors).toBeDefined();
       // TODO: fix error response handling add updated test here.
+    });
+  });
+
+  test('HTTP 200 with a GraphQL errors body is surfaced as an error', () => {
+    // GraphQL convention: transport succeeds (200) but the body carries an
+    // `errors` array. parseJsonOrThrow returns the body unchanged (200 is ok);
+    // the resolver's `if (response.errors)` branch is what turns it into an
+    // error, so the caller must still receive errors and no data.
+    nock(GQL_BASE_URL, {})
+      .post('')
+      .reply(200, {
+        errors: [
+          {
+            message: 'GraphQL error: field failed to resolve',
+            path: ['getGQLSessionDetails'],
+            extensions: { code: 'INTERNAL_ERROR' },
+          },
+        ],
+      });
+
+    const contextValue = {
+      req: {
+        headers: {
+          Authorization: 'Bearer 123',
+          cookie: 'a=a',
+        },
+      },
+    };
+
+    return graphql({
+      schema,
+      source: `
+         query getSession($sessionId: String, $asd: String) {
+          getGQLSessionDetails(sessionId: $sessionId, asd: $asd) {
+            name
+            email
+            id
+          }
+        }
+      `,
+      contextValue,
+    }).then((response: any) => {
+      expect(response?.data?.getGQLSessionDetails).toBeUndefined();
+      expect(response.errors).toBeDefined();
     });
   });
 
