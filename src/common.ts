@@ -175,12 +175,45 @@ export async function parseJsonOrThrow(response, ErrorClass) {
     let payload;
     try {
         payload = await response.json();
-    } catch (err) {
-        throw new ErrorClass(response.statusText, response.status, err);
+    } catch {
+        // Body isn't JSON (e.g. an HTML error page). Don't attach the raw
+        // parse error — its message leaks the internal downstream URL and
+        // parser debug detail to API clients. The status line is the signal.
+        throw new ErrorClass(response.statusText, response.status);
     }
     throw new ErrorClass(
         response.statusText,
         response.status,
         payload.errors || payload,
+    );
+}
+
+// Apollo string error-codes -> HTTP status, for downstream GraphQL errors
+// returned as HTTP 200 with an `errors` array.
+const GQL_ERROR_CODE_TO_STATUS: Record<string, number> = {
+    UNAUTHENTICATED: 401,
+    FORBIDDEN: 403,
+    BAD_USER_INPUT: 400,
+    GRAPHQL_PARSE_FAILED: 400,
+    GRAPHQL_VALIDATION_FAILED: 400,
+};
+
+// Derive the real HTTP status from a downstream GraphQL `errors` array. The
+// status is carried in the first error's extensions — numeric `code` or
+// `upstreamResponse.status` (rise rest-resolver errors, e.g. 403), or an
+// Apollo error-code string. App-level numeric codes (e.g. 10002) are not
+// valid HTTP statuses and fall through to 500.
+export function deriveGqlErrorStatus(errors: any[]): number {
+    const [firstError] = errors || [];
+    const ext = firstError?.extensions ?? {};
+    const rawCode = ext.code ?? firstError?.code;
+    const isHttpErrorStatus = (n: number) =>
+        Number.isInteger(n) && n >= 400 && n <= 599;
+    return (
+        [Number(ext.upstreamResponse?.status), Number(rawCode)].find(
+            isHttpErrorStatus,
+        ) ||
+        GQL_ERROR_CODE_TO_STATUS[rawCode] ||
+        500
     );
 }

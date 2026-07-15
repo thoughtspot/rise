@@ -11,6 +11,7 @@ import {
     renameFieldsInQuery,
     reverseKeyValue,
     parseJsonOrThrow,
+    deriveGqlErrorStatus,
 } from './common';
 import { generateBodyFromTemplate } from './rest-resolver';
 
@@ -131,12 +132,13 @@ export function gqlResolver(
             })
             .then((response) => {
                 if (response.errors) {
-                    // TODO: Update the error class to passthough error context more correctly.
-                    throw new options.ErrorClass(
-                        response.statusText,
-                        response.status,
-                        response.errors,
-                    );
+                    // `response` here is the parsed GraphQL body (HTTP 200) —
+                    // the failure status lives in the error's extensions, not
+                    // on the (undefined) response.status/statusText.
+                    const status = deriveGqlErrorStatus(response.errors);
+                    const message =
+                        response.errors[0]?.message || 'Downstream GraphQL error';
+                    throw new options.ErrorClass(message, status, response.errors);
                 }
                 return response;
             })
