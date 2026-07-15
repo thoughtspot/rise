@@ -284,6 +284,15 @@ describe('deriveGqlErrorStatus', () => {
   test('defaults to 500 when no recognizable code is present', () => {
     expect(deriveGqlErrorStatus([{ message: 'boom' }])).toBe(500);
   });
+
+  test('falls back to a top-level error code when extensions are absent', () => {
+    expect(deriveGqlErrorStatus([{ message: 'denied', code: 403 }])).toBe(403);
+  });
+
+  test('defaults to 500 for empty or missing errors input', () => {
+    expect(deriveGqlErrorStatus([])).toBe(500);
+    expect(deriveGqlErrorStatus(undefined)).toBe(500);
+  });
 });
 
 describe('Should call the Target', () => {

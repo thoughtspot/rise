@@ -203,7 +203,7 @@ const GQL_ERROR_CODE_TO_STATUS: Record<string, number> = {
 // `upstreamResponse.status` (rise rest-resolver errors, e.g. 403), or an
 // Apollo error-code string. App-level numeric codes (e.g. 10002) are not
 // valid HTTP statuses and fall through to 500.
-export function deriveGqlErrorStatus(errors: any[]): number {
+export function deriveGqlErrorStatus(errors?: any[]): number {
     const [firstError] = errors || [];
     const ext = firstError?.extensions ?? {};
     const rawCode = ext.code ?? firstError?.code;
