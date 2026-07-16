@@ -7,7 +7,7 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import fs from 'fs';
 import path from 'path';
 import { rise } from '../src/index';
-import { mapKeysDeep, parseResponseKeyFormat, reverseKeyValue, renameFieldsInQuery, parseJsonOrThrow } from '../src/common';
+import { mapKeysDeep, parseResponseKeyFormat, reverseKeyValue, renameFieldsInQuery, parseJsonOrThrow, deriveGqlErrorStatus } from '../src/common';
 
 const typeDefs = fs.readFileSync(path.join(__dirname, './schema.graphql'), 'utf8');
 
@@ -223,7 +223,9 @@ describe('parseJsonOrThrow', () => {
   test('preserves the status when the body is empty / not valid JSON', async () => {
     // Reproduces the Eureka Agent 403-with-empty-body case: response.json()
     // throws a SyntaxError, but the HTTP status must still be preserved
-    // (instead of surfacing as a status-less 500).
+    // (instead of surfacing as a status-less 500). The raw parse error must
+    // NOT be attached — its message leaks the internal downstream URL and
+    // parser debug detail to API clients.
     const parseError = new SyntaxError('Unexpected end of JSON input');
     const response = makeResponse({
       status: 403,
@@ -236,8 +238,60 @@ describe('parseJsonOrThrow', () => {
     ).rejects.toMatchObject({
       status: 403,
       statusText: 'Forbidden',
-      payload: parseError,
+      payload: undefined,
     });
+  });
+});
+
+describe('deriveGqlErrorStatus', () => {
+  // Downstream (internal /prism) reports a failing eureka call as HTTP 200
+  // with a GraphQL `errors` array — the real status lives in extensions.
+  test('extracts a numeric extensions.code (e.g. rest-resolver 403)', () => {
+    expect(
+      deriveGqlErrorStatus([{ message: 'denied', extensions: { code: 403 } }]),
+    ).toBe(403);
+  });
+
+  test('extracts nested extensions.upstreamResponse.status (UPSTREAM_FAILURE)', () => {
+    expect(
+      deriveGqlErrorStatus([
+        {
+          message: 'Request failed with status code 403',
+          extensions: {
+            code: 'UPSTREAM_FAILURE',
+            upstreamResponse: { status: 403 },
+          },
+        },
+      ]),
+    ).toBe(403);
+  });
+
+  test('maps Apollo string error-codes to their HTTP status', () => {
+    expect(
+      deriveGqlErrorStatus([{ extensions: { code: 'GRAPHQL_VALIDATION_FAILED' } }]),
+    ).toBe(400);
+    expect(
+      deriveGqlErrorStatus([{ extensions: { code: 'UNAUTHENTICATED' } }]),
+    ).toBe(401);
+  });
+
+  test('clamps app-level numeric codes (e.g. 10002) that are not HTTP statuses to 500', () => {
+    expect(
+      deriveGqlErrorStatus([{ extensions: { code: 10002 } }]),
+    ).toBe(500);
+  });
+
+  test('defaults to 500 when no recognizable code is present', () => {
+    expect(deriveGqlErrorStatus([{ message: 'boom' }])).toBe(500);
+  });
+
+  test('falls back to a top-level error code when extensions are absent', () => {
+    expect(deriveGqlErrorStatus([{ message: 'denied', code: 403 }])).toBe(403);
+  });
+
+  test('defaults to 500 for empty or missing errors input', () => {
+    expect(deriveGqlErrorStatus([])).toBe(500);
+    expect(deriveGqlErrorStatus(undefined)).toBe(500);
   });
 });
 
