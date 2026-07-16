@@ -136,8 +136,7 @@ export function gqlResolver(
                     // the failure status lives in the error's extensions, not
                     // on the (undefined) response.status/statusText.
                     const status = deriveGqlErrorStatus(response.errors);
-                    const message =
-                        response.errors[0]?.message || 'Downstream GraphQL error';
+                    const message = response.errors[0]?.message || 'Downstream GraphQL error';
                     throw new options.ErrorClass(message, status, response.errors);
                 }
                 return response;
