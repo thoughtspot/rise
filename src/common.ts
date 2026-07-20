@@ -207,13 +207,8 @@ export function deriveGqlErrorStatus(errors?: any[]): number {
     const [firstError] = errors || [];
     const ext = firstError?.extensions ?? {};
     const rawCode = ext.code ?? firstError?.code;
-    const isHttpErrorStatus = (n: number) =>
-        Number.isInteger(n) && n >= 400 && n <= 599;
-    return (
-        [Number(ext.upstreamResponse?.status), Number(rawCode)].find(
-            isHttpErrorStatus,
-        ) ||
-        GQL_ERROR_CODE_TO_STATUS[rawCode] ||
-        500
-    );
+    const isHttpErrorStatus = (n: number) => Number.isInteger(n) && n >= 400 && n <= 599;
+    const candidates = [Number(ext.upstreamResponse?.status), Number(rawCode)];
+    const numericStatus = candidates.find(isHttpErrorStatus);
+    return numericStatus || GQL_ERROR_CODE_TO_STATUS[rawCode] || 500;
 }

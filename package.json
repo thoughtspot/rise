@@ -3,6 +3,9 @@
   "version": "0.7.20",
   "description": "Rise above the REST with GraphQL",
   "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "check": "eslint 'src/**'",
     "test": "npm run check; jest",
